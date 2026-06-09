@@ -8,6 +8,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import agents, calendar, systems, tasks
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -25,6 +26,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(systems.router)
+app.include_router(tasks.router)
+app.include_router(calendar.router)
+app.include_router(agents.router)
 
 
 @app.get("/", tags=["meta"])
