@@ -4,6 +4,28 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 ---
 
+## ▶ Resume here (read this first)
+
+**Status:** Phase 1 (scaffold) and Phase 2 (data model & CRUD) are **done, committed, pushed** to `origin/main`. Working tree clean.
+
+**Do next:** **Phase 3 — Dashboard, Calendar & rule-based Daily Focus.** Build the frontend (add/edit Systems→Tasks→Subtasks, set monthly priorities), a dashboard (today's focus, deadlines, flags), the live calendar, a deterministic (non-AI) daily-focus algorithm, and the end-of-day check-in. Goal: the app becomes usable end-to-end. (Part B / AI brain comes after.)
+
+**How to run & test (Windows, network-share repo):**
+- Backend API: `cd backend` → `uvicorn app.main:app --reload --port 8000` (needs deps installed + `.env`).
+- Frontend: `cd frontend` → `npm install` → `npm run dev` (http://localhost:5173, proxies `/api` → `:8000`).
+- Backend tests use **in-memory SQLite — no live DB needed**.
+
+**⚠ Environment gotchas (learned the hard way — don't repeat):**
+- **Do NOT build the Python venv on the network share** and do not run `pip install --upgrade pip` there — it corrupts pip mid-write (`pip._vendor.rich` ModuleNotFoundError). Build the venv on **local disk**.
+- The working test venv is at `%LOCALAPPDATA%\Temp\mindanchor-venv` (Python 3.14). It may be gone tomorrow (temp dir) — if so, recreate on local disk.
+- Local Python is **3.14**, which has **no wheels** for the pinned dep versions (pydantic-core fails to build). For local testing, `pip install -U fastapi pydantic pydantic-settings sqlalchemy httpx pytest ruff` (latest, has cp314 wheels). **CI and deploy use the pinned `requirements.txt` on Python 3.11** — keep the pins as-is.
+- Run lint+tests: `cd backend` then `<localvenv>\Scripts\python.exe -m ruff check .` and `... -m pytest -q`. Last run: ruff clean, 6 passed.
+- For Phase 3+ DB work locally: start Postgres (Docker one-liner in `docs/DATABASE.md`), set `backend/.env` `DATABASE_URL`, then `python scripts/init_db.py`.
+
+**Convention:** end every phase with a `CLAUDE.md` action-log update + commit + push.
+
+---
+
 ## Project
 
 MindAnchor — a personal, single-user AI productivity system (AI project manager + scrum master + calendar + morning briefing). Source of truth for product scope: [`MindAnchor_Product_Description.md`](../MindAnchor_Product_Description.md). Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
@@ -64,3 +86,4 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
   - Tests: `tests/test_crud.py` (in-memory SQLite, no live DB needed) covering priority inheritance, cascade delete, monthly priority upsert idempotency, focus blocks & agent assignment.
   - **Verified locally:** `ruff check` clean; `pytest` 6 passed. (Local venv built on disk at `%LOCALAPPDATA%\Temp\mindanchor-venv`; latest dep versions used for the 3.14 interpreter — CI/deploy use the pinned versions on Python 3.11.)
   - Fixes during build: lazy engine (avoid eager `psycopg2` import); `StrEnum` (UP042); ruff ignore `B008` (FastAPI `Depends` idiom); resolved `app` package vs FastAPI-instance name collision in tests.
+- Added the **"Resume here"** section at the top of this file (status, next step, run/test commands, environment gotchas) so a fresh session can pick up cleanly.
