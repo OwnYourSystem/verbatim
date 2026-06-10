@@ -6,9 +6,9 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 ## ▶ Resume here (read this first)
 
-**Status:** Phase 1 (scaffold) and Phase 2 (data model & CRUD) are **done, committed, pushed** to `origin/main`. Working tree clean.
+**Status:** Phases 1–3 are **done, committed, pushed** to `origin/main`. Working tree clean. The app is now usable end-to-end (manual, no AI yet): manage Systems→Tasks→Subtasks, set monthly priorities, see today's focus/deadlines/flags, schedule focus blocks, do end-of-day check-ins.
 
-**Do next:** **Phase 3 — Dashboard, Calendar & rule-based Daily Focus.** Build the frontend (add/edit Systems→Tasks→Subtasks, set monthly priorities), a dashboard (today's focus, deadlines, flags), the live calendar, a deterministic (non-AI) daily-focus algorithm, and the end-of-day check-in. Goal: the app becomes usable end-to-end. (Part B / AI brain comes after.)
+**Do next:** **Part B / Phase 4 — Orchestrator + event-triggered specialist agents.** Wire `emit_event` (in `backend/app/services.py`) to an orchestrator that routes change-events to a per-System specialist agent (Claude). Agents read state + their `AgentProgram` + immutable priorities and produce a **proposed** rebalance (never auto-applied). Needs `ANTHROPIC_API_KEY`. Start by designing the orchestrator + a `RebalanceProposal` model/endpoint, then the agent invocation.
 
 **How to run & test (Windows, network-share repo):**
 - Backend API: `cd backend` → `uvicorn app.main:app --reload --port 8000` (needs deps installed + `.env`).
@@ -20,7 +20,8 @@ This file is the working memory for the MindAnchor build. It records **what the 
 - The working test venv is at `%LOCALAPPDATA%\Temp\mindanchor-venv` (Python 3.14). It may be gone tomorrow (temp dir) — if so, recreate on local disk.
 - Local Python is **3.14**, which has **no wheels** for the pinned dep versions (pydantic-core fails to build). For local testing, `pip install -U fastapi pydantic pydantic-settings sqlalchemy httpx pytest ruff` (latest, has cp314 wheels). **CI and deploy use the pinned `requirements.txt` on Python 3.11** — keep the pins as-is.
 - Run lint+tests: `cd backend` then `<localvenv>\Scripts\python.exe -m ruff check .` and `... -m pytest -q`. Last run: ruff clean, 6 passed.
-- For Phase 3+ DB work locally: start Postgres (Docker one-liner in `docs/DATABASE.md`), set `backend/.env` `DATABASE_URL`, then `python scripts/init_db.py`.
+- For DB work locally: start Postgres (Docker one-liner in `docs/DATABASE.md`), set `backend/.env` `DATABASE_URL`, then `python scripts/init_db.py`.
+- **Frontend build cannot run from the network share:** `npm run <script>` spawns `cmd.exe` which rejects UNC cwd, and `esbuild`'s postinstall fails under UNC (rolls back `node_modules`). To verify the frontend, **copy `frontend/` to a local-disk temp dir** (e.g. `%LOCALAPPDATA%\Temp\mindanchor-fe`), then `npm install` and build by calling node directly: `node node_modules/typescript/bin/tsc -b && node node_modules/vite/bin/vite.js build`. CI (GitHub Actions, ubuntu) builds it normally — no UNC issue there. Last local build: ✅ tsc clean, vite built, PWA SW generated.
 
 **Convention:** end every phase with a `CLAUDE.md` action-log update + commit + push.
 
@@ -87,3 +88,16 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
   - **Verified locally:** `ruff check` clean; `pytest` 6 passed. (Local venv built on disk at `%LOCALAPPDATA%\Temp\mindanchor-venv`; latest dep versions used for the 3.14 interpreter — CI/deploy use the pinned versions on Python 3.11.)
   - Fixes during build: lazy engine (avoid eager `psycopg2` import); `StrEnum` (UP042); ruff ignore `B008` (FastAPI `Depends` idiom); resolved `app` package vs FastAPI-instance name collision in tests.
 - Added the **"Resume here"** section at the top of this file (status, next step, run/test commands, environment gotchas) so a fresh session can pick up cleanly.
+- **Phase 3 — dashboard, calendar & rule-based daily focus** built:
+  - Backend:
+    - `models.py` — added `CheckIn` (day, notes, `completed_task_ids` JSON).
+    - `services.py` — rule-based daily focus: `choose_focus_system` (active system with open work + highest current-month priority, ties by nearest deadline) and `build_today` (focus system + tasks, upcoming deadlines within 7 days, flagged = overdue or blocked). Deterministic, no AI.
+    - `schemas.py` — `CheckInCreate/Read`, `TodayView`.
+    - `api/dashboard.py` — `GET /dashboard/today`; `api/checkins.py` — `GET/POST /check-ins` (marks reported tasks done). Wired into `main.py`.
+    - Tests: `tests/test_dashboard.py` — focus selection, upcoming/flagged buckets, check-in marks done + history, empty dashboard. **Verified: ruff clean, 10 passed.**
+  - Frontend (React PWA):
+    - `src/types.ts`, `src/api.ts` (typed fetch client over `/api`).
+    - Router in `src/main.tsx`; nav layout in `src/App.tsx` (Today / Systems / Calendar).
+    - `src/components/ui.tsx` (Card, StatusBadge, Empty).
+    - Pages: `Dashboard` (today's focus, upcoming, flagged, end-of-day check-in), `Systems` (CRUD systems, set monthly priority, manage tasks + subtasks with inherited priority shown), `Calendar` (focus-block agenda + add/delete).
+    - Fixed a tsc pitfall: `useEffect(load, [])` → wrapped (effects must return void).

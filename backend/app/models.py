@@ -11,6 +11,7 @@ import enum
 from datetime import date, datetime, time
 
 from sqlalchemy import (
+    JSON,
     Date,
     DateTime,
     Enum,
@@ -187,3 +188,15 @@ class AgentAssignment(TimestampMixin, Base):
 
     system: Mapped[System] = relationship(back_populates="assignment")
     program: Mapped[AgentProgram | None] = relationship()
+
+
+class CheckIn(TimestampMixin, Base):
+    """End-of-day check-in. Closes the loop instead of ticking tasks all day."""
+
+    __tablename__ = "check_ins"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+    # IDs of tasks marked done during this check-in (echoed for history).
+    completed_task_ids: Mapped[list[int]] = mapped_column(JSON, default=list, nullable=False)

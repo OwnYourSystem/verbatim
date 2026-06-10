@@ -189,3 +189,27 @@ class AgentAssignmentUpdate(BaseModel):
 class AgentAssignmentRead(_ORM, AgentAssignmentBase):
     id: int
     created_at: datetime
+
+
+# ---- CheckIn ----
+class CheckInCreate(BaseModel):
+    day: date | None = None  # defaults to today on the server
+    notes: str | None = None
+    completed_task_ids: list[int] = Field(default_factory=list)
+
+
+class CheckInRead(_ORM):
+    id: int
+    day: date
+    notes: str | None
+    completed_task_ids: list[int]
+    created_at: datetime
+
+
+# ---- Dashboard ----
+class TodayView(BaseModel):
+    day: date
+    focus_system: SystemRead | None
+    focus_tasks: list[TaskRead]
+    upcoming_deadlines: list[TaskRead]
+    flagged: list[TaskRead]

@@ -1,45 +1,32 @@
-import { useEffect, useState } from "react";
+import { NavLink, Outlet } from "react-router-dom";
 
-type Health = { status: string; environment?: string };
+const linkClass = ({ isActive }: { isActive: boolean }) =>
+  `px-3 py-2 rounded-md text-sm font-medium ${
+    isActive ? "bg-slate-700 text-white" : "text-slate-300 hover:bg-slate-800"
+  }`;
 
 export function App() {
-  const [health, setHealth] = useState<Health | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/health")
-      .then((r) => r.json())
-      .then(setHealth)
-      .catch(() => setError("Backend not reachable yet (start it on :8000)."));
-  }, []);
-
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-6">
-      <div className="max-w-md w-full">
-        <h1 className="text-3xl font-bold tracking-tight">MindAnchor</h1>
-        <p className="mt-2 text-slate-400">
-          Your external brain — AI project manager, scrum master & calendar.
-        </p>
-
-        <div className="mt-8 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
-          <div className="text-sm uppercase tracking-wide text-slate-500">
-            Backend status
-          </div>
-          {health ? (
-            <div className="mt-1 text-emerald-400 font-medium">
-              {health.status} · {health.environment ?? "—"}
-            </div>
-          ) : error ? (
-            <div className="mt-1 text-amber-400 text-sm">{error}</div>
-          ) : (
-            <div className="mt-1 text-slate-400 text-sm">checking…</div>
-          )}
+    <div className="min-h-screen bg-slate-900 text-slate-100">
+      <header className="border-b border-slate-800">
+        <div className="max-w-5xl mx-auto px-4 flex items-center gap-2 h-14">
+          <span className="font-bold tracking-tight mr-4">MindAnchor</span>
+          <nav className="flex gap-1">
+            <NavLink to="/" end className={linkClass}>
+              Today
+            </NavLink>
+            <NavLink to="/systems" className={linkClass}>
+              Systems
+            </NavLink>
+            <NavLink to="/calendar" className={linkClass}>
+              Calendar
+            </NavLink>
+          </nav>
         </div>
-
-        <p className="mt-8 text-xs text-slate-600">
-          Phase 1 skeleton. Data model, dashboard, and the AI brain come next.
-        </p>
-      </div>
+      </header>
+      <main className="max-w-5xl mx-auto px-4 py-6">
+        <Outlet />
+      </main>
     </div>
   );
 }
