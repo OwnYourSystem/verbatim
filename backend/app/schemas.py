@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models import SystemStatus, WorkStatus
+from app.models import ProposalStatus, SystemStatus, WorkStatus
 
 
 class _ORM(BaseModel):
@@ -204,6 +205,34 @@ class CheckInRead(_ORM):
     notes: str | None
     completed_task_ids: list[int]
     created_at: datetime
+
+
+# ---- Rebalance proposals (agent output) ----
+class ReorderAction(BaseModel):
+    type: Literal["reorder"] = "reorder"
+    task_id: int
+    position: int
+
+
+class AddPretaskAction(BaseModel):
+    type: Literal["add_pretask"] = "add_pretask"
+    title: str = Field(min_length=1, max_length=300)
+    # New pre-task is inserted at the front of the system's task list.
+
+
+# Discriminated by the "type" field when parsing agent output.
+ProposalAction = ReorderAction | AddPretaskAction
+
+
+class RebalanceProposalRead(_ORM):
+    id: int
+    system_id: int
+    trigger: str
+    summary: str
+    actions: list[dict]
+    status: ProposalStatus
+    created_at: datetime
+    decided_at: datetime | None
 
 
 # ---- Dashboard ----

@@ -6,9 +6,11 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 ## ▶ Resume here (read this first)
 
-**Status:** Phases 1–3 are **done, committed, pushed** to `origin/main`. Working tree clean. The app is now usable end-to-end (manual, no AI yet): manage Systems→Tasks→Subtasks, set monthly priorities, see today's focus/deadlines/flags, schedule focus blocks, do end-of-day check-ins.
+**Status:** Phases 1–4 are **done, committed, pushed** to `origin/main`. Working tree clean. App is usable end-to-end (manual) AND the AI brain backend is in place: per-System specialist agents propose rebalances (propose→approve), with a deterministic offline stub when no API key is set.
 
-**Do next:** **Part B / Phase 4 — Orchestrator + event-triggered specialist agents.** Wire `emit_event` (in `backend/app/services.py`) to an orchestrator that routes change-events to a per-System specialist agent (Claude). Agents read state + their `AgentProgram` + immutable priorities and produce a **proposed** rebalance (never auto-applied). Needs `ANTHROPIC_API_KEY`. Start by designing the orchestrator + a `RebalanceProposal` model/endpoint, then the agent invocation.
+**Do next:** **Phase 5 — Dynamic rebalancing UI (propose → approve in the browser).** Add a frontend Proposals view: a "Rebalance" button per System (`POST /systems/{id}/rebalance`), a list of pending proposals showing the summary + actions as a readable diff, and approve/reject buttons (`/rebalance-proposals/{id}/approve|reject`). Backend for this already exists (Phase 4). Optional stretch: wire `emit_event` → auto-propose with debounce + cost ceiling.
+
+**To enable the real Claude agent:** put `ANTHROPIC_API_KEY=sk-ant-...` in `backend/.env` (never commit). `get_llm()` auto-switches from StubLLM to AnthropicLLM. See `docs/AGENTS.md`.
 
 **How to run & test (Windows, network-share repo):**
 - Backend API: `cd backend` → `uvicorn app.main:app --reload --port 8000` (needs deps installed + `.env`).
@@ -101,3 +103,12 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
     - `src/components/ui.tsx` (Card, StatusBadge, Empty).
     - Pages: `Dashboard` (today's focus, upcoming, flagged, end-of-day check-in), `Systems` (CRUD systems, set monthly priority, manage tasks + subtasks with inherited priority shown), `Calendar` (focus-block agenda + add/delete).
     - Fixed a tsc pitfall: `useEffect(load, [])` → wrapped (effects must return void).
+- **Phase 4 — orchestrator + event-triggered specialist agents** (the AI brain, backend) built:
+  - `models.py` — `RebalanceProposal` (system_id, trigger, summary, `actions` JSON, `ProposalStatus` pending/approved/rejected, decided_at).
+  - `schemas.py` — `ReorderAction` / `AddPretaskAction` (allow-listed `ProposalAction` union), `RebalanceProposalRead`.
+  - `agents/llm.py` — `LLMClient` protocol; `StubLLM` (deterministic, offline: orders open tasks by deadline, suggests prep pre-task for ≤3-day deadlines); `AnthropicLLM` (lazy `anthropic` import, strict-JSON prompt); `get_llm()` auto-selects by key presence.
+  - `agents/orchestrator.py` — `build_context`, `propose_for_system` (validates agent actions, drops malformed, stores pending), `apply_proposal` (reorder / add_pretask, only own-system tasks), `decide_proposal`.
+  - `api/rebalance.py` — `POST /systems/{id}/rebalance`, `GET /rebalance-proposals`, `GET /rebalance-proposals/{id}`, approve/reject. Wired into `main.py`.
+  - `docs/AGENTS.md` — agent design, action allow-list, API, how to enable real Claude.
+  - Tests: `tests/test_rebalance.py` — stub selection w/o key, propose→approve reorders by deadline, reject doesn't apply, can't decide twice, add_pretask creates front task. **Verified: ruff clean, 15 passed (no key/network needed).**
+  - Human-gated by design: agents only ever propose; nothing applies until approve.

@@ -41,6 +41,12 @@ class WorkStatus(enum.StrEnum):
     done = "done"
 
 
+class ProposalStatus(enum.StrEnum):
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
+
+
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -200,3 +206,26 @@ class CheckIn(TimestampMixin, Base):
     notes: Mapped[str | None] = mapped_column(Text)
     # IDs of tasks marked done during this check-in (echoed for history).
     completed_task_ids: Mapped[list[int]] = mapped_column(JSON, default=list, nullable=False)
+
+
+class RebalanceProposal(TimestampMixin, Base):
+    """A proposed plan from a specialist agent, awaiting the user's approval.
+
+    Nothing is applied until `approve` is called — this enforces the
+    'propose, never auto-reorganize' product rule.
+    """
+
+    __tablename__ = "rebalance_proposals"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    system_id: Mapped[int] = mapped_column(
+        ForeignKey("systems.id", ondelete="CASCADE"), nullable=False
+    )
+    trigger: Mapped[str] = mapped_column(String(100), default="manual", nullable=False)
+    summary: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    # List of action dicts (see schemas.ProposalAction): reorder / add_pretask.
+    actions: Mapped[list[dict]] = mapped_column(JSON, default=list, nullable=False)
+    status: Mapped[ProposalStatus] = mapped_column(
+        Enum(ProposalStatus), default=ProposalStatus.pending, nullable=False
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
