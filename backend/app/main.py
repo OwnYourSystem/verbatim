@@ -8,7 +8,16 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import agents, calendar, checkins, dashboard, rebalance, systems, tasks
+from app.api import (
+    agents,
+    calendar,
+    checkins,
+    dashboard,
+    intake,
+    rebalance,
+    systems,
+    tasks,
+)
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -34,6 +43,7 @@ app.include_router(agents.router)
 app.include_router(dashboard.router)
 app.include_router(checkins.router)
 app.include_router(rebalance.router)
+app.include_router(intake.router)
 
 
 @app.get("/", tags=["meta"])

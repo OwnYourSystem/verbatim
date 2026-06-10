@@ -85,3 +85,38 @@ export interface RebalanceProposal {
   created_at: string;
   decided_at: string | null;
 }
+
+export interface IntakeAnswer {
+  question: string;
+  answer: string;
+}
+
+export interface ProposedSubtask {
+  title: string;
+}
+
+export interface ProposedTask {
+  title: string;
+  deadline?: string | null;
+  subtasks: ProposedSubtask[];
+}
+
+export interface IntakeSystemFields {
+  name: string;
+  purpose?: string | null;
+  goals?: string | null;
+  constraints?: string | null;
+  dependencies?: string | null;
+  delivery_expectations?: string | null;
+}
+
+export interface IntakeProposal {
+  system: IntakeSystemFields;
+  tasks: ProposedTask[];
+}
+
+export interface IntakeStep {
+  done: boolean;
+  question?: string | null;
+  proposal?: IntakeProposal | null;
+}

@@ -235,6 +235,52 @@ class RebalanceProposalRead(_ORM):
     decided_at: datetime | None
 
 
+# ---- AI intake interview ----
+class IntakeAnswer(BaseModel):
+    question: str
+    answer: str
+
+
+class IntakeStepRequest(BaseModel):
+    history: list[IntakeAnswer] = Field(default_factory=list)
+
+
+class ProposedSubtask(BaseModel):
+    title: str = Field(min_length=1, max_length=300)
+
+
+class ProposedTask(BaseModel):
+    title: str = Field(min_length=1, max_length=300)
+    deadline: date | None = None
+    subtasks: list[ProposedSubtask] = Field(default_factory=list)
+
+
+class IntakeSystemFields(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    purpose: str | None = None
+    goals: str | None = None
+    constraints: str | None = None
+    dependencies: str | None = None
+    delivery_expectations: str | None = None
+
+
+class IntakeProposal(BaseModel):
+    system: IntakeSystemFields
+    tasks: list[ProposedTask] = Field(default_factory=list)
+
+
+class IntakeStep(BaseModel):
+    """One turn of the interview: either the next question, or a final proposal."""
+
+    done: bool
+    question: str | None = None
+    proposal: IntakeProposal | None = None
+
+
+class IntakeCommit(IntakeProposal):
+    """The user-approved proposal to persist."""
+
+
 # ---- Dashboard ----
 class TodayView(BaseModel):
     day: date

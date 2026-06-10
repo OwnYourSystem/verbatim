@@ -1,6 +1,9 @@
 import type {
   CheckIn,
   FocusBlock,
+  IntakeAnswer,
+  IntakeProposal,
+  IntakeStep,
   ProposalStatus,
   RebalanceProposal,
   Subtask,
@@ -100,4 +103,16 @@ export const api = {
     request<RebalanceProposal>(`/rebalance-proposals/${id}/approve`, { method: "POST" }),
   rejectProposal: (id: number) =>
     request<RebalanceProposal>(`/rebalance-proposals/${id}/reject`, { method: "POST" }),
+
+  // AI intake interview
+  intakeNext: (history: IntakeAnswer[]) =>
+    request<IntakeStep>("/intake/next", {
+      method: "POST",
+      body: JSON.stringify({ history }),
+    }),
+  intakeCommit: (proposal: IntakeProposal) =>
+    request<System>("/intake/commit", {
+      method: "POST",
+      body: JSON.stringify(proposal),
+    }),
 };

@@ -6,9 +6,9 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 ## ▶ Resume here (read this first)
 
-**Status:** Phases 1–5 are **done, committed, pushed** to `origin/main`. Working tree clean (except local gitignored `backend/.env`). The propose→approve loop now works in the browser (Proposals page + per-System Rebalance button).
+**Status:** Phases 1–6 are **done, committed, pushed** to `origin/main`. Working tree clean (except local gitignored `backend/.env`). Part A (manual app) + most of Part B (AI brain) complete: propose→approve rebalancing AND the AI intake interview both work, with offline stubs when no key.
 
-**Do next:** **Phase 6 — AI intake interview.** Structured, one-question-at-a-time intake (streaming Claude) that defines a new System (purpose/goals/constraints/dependencies/delivery), then the agent proposes a task tree the user approves before persisting. Reuse the LLM interface in `backend/app/agents/llm.py` (add a stub path so it works offline).
+**Do next:** **Phase 7 — Reports & push notifications.** Weekly report (Fri), monthly review (month-end), on-demand reports (all plain-language, generated from data; AI optional via the LLM interface). Web Push morning briefing via the PWA service worker. Add report endpoints + a Reports page; wire a service-worker push handler. Then Phase 8 (PWA polish + RN scaffold).
 
 **To enable the real Claude agent:** key already in local `backend/.env` (gitignored). `get_llm()` auto-switches StubLLM→AnthropicLLM. See `docs/AGENTS.md`.
 
@@ -120,3 +120,10 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
   - `Systems.tsx` — per-System **Rebalance** button + success notice; nav link + route added.
   - **Verified:** local-disk `tsc` clean + `vite build` (37 modules). Backend propose→approve already covered by 15 tests.
   - Handled the key-in-`.env.example` incident (see Security note above): reverted tracked file, created gitignored `backend/.env`, confirmed key absent from git history.
+- **Phase 6 — AI intake interview** built:
+  - `agents/intake.py` — `StubIntake` (fixed 6-question sequence: name/purpose/goals/constraints/dependencies/delivery → deterministic starter task tree) + `AnthropicIntake` (Claude, one-question-at-a-time, strict-JSON); `get_intake()` auto-selects by key.
+  - `schemas.py` — `IntakeStepRequest`, `IntakeStep`, `IntakeProposal`/`ProposedTask`/`ProposedSubtask`, `IntakeCommit`.
+  - `api/intake.py` — `POST /intake/next` (next question or final proposal), `POST /intake/commit` (persist System+Tasks+Subtasks after approval). Wired into `main.py`.
+  - `tests/conftest.py` — **autouse fixture forces empty ANTHROPIC_API_KEY** so tests never use the dev `.env`/real API. (Fixed intake/rebalance tests that broke once `backend/.env` existed.)
+  - Tests: `tests/test_intake.py` — one-question-at-a-time, first Q is name, commit persists tree. **Verified: ruff clean, 18 passed.**
+  - Frontend: `pages/Intake.tsx` (conversational interview → review proposed system+tasks → "Create system"), `types.ts`/`api.ts` intake additions, nav "New system" + route. **Verified: vite build clean.**
