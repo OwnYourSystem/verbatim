@@ -136,3 +136,4 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
   - Frontend: `pages/Reports.tsx` (weekly/monthly/on-demand tabs + briefing section with Enable-notifications and Show-briefing-now via the SW). Nav "Reports" + route. **Verified: vite build clean.**
   - `docs/NOTIFICATIONS.md` — Tier 1 (client notifications, done) vs Tier 2 (VAPID + pywebpush + scheduler, deploy-time).
   - User rotated the exposed API key; new key in gitignored `backend/.env`.
+- **Docs refresh:** updated root `README.md` to current state — status (Phases 1–7 done), Features list, API overview table, phase checkmarks (1–7 ✅; 8 + deploy pending), a Documentation index, and a Quick start. README previously still showed only Phase 1 done.
