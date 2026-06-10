@@ -6,11 +6,13 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 ## ▶ Resume here (read this first)
 
-**Status:** Phases 1–4 are **done, committed, pushed** to `origin/main`. Working tree clean. App is usable end-to-end (manual) AND the AI brain backend is in place: per-System specialist agents propose rebalances (propose→approve), with a deterministic offline stub when no API key is set.
+**Status:** Phases 1–5 are **done, committed, pushed** to `origin/main`. Working tree clean (except local gitignored `backend/.env`). The propose→approve loop now works in the browser (Proposals page + per-System Rebalance button).
 
-**Do next:** **Phase 5 — Dynamic rebalancing UI (propose → approve in the browser).** Add a frontend Proposals view: a "Rebalance" button per System (`POST /systems/{id}/rebalance`), a list of pending proposals showing the summary + actions as a readable diff, and approve/reject buttons (`/rebalance-proposals/{id}/approve|reject`). Backend for this already exists (Phase 4). Optional stretch: wire `emit_event` → auto-propose with debounce + cost ceiling.
+**Do next:** **Phase 6 — AI intake interview.** Structured, one-question-at-a-time intake (streaming Claude) that defines a new System (purpose/goals/constraints/dependencies/delivery), then the agent proposes a task tree the user approves before persisting. Reuse the LLM interface in `backend/app/agents/llm.py` (add a stub path so it works offline).
 
-**To enable the real Claude agent:** put `ANTHROPIC_API_KEY=sk-ant-...` in `backend/.env` (never commit). `get_llm()` auto-switches from StubLLM to AnthropicLLM. See `docs/AGENTS.md`.
+**To enable the real Claude agent:** key already in local `backend/.env` (gitignored). `get_llm()` auto-switches StubLLM→AnthropicLLM. See `docs/AGENTS.md`.
+
+**⚠ Security note (2026-06-10):** an API key was briefly pasted into the *tracked* `backend/.env.example`. It was reverted before any commit (never entered git history) and moved to the gitignored `backend/.env`. Because it was exposed in the session transcript, **rotate that key** at console.anthropic.com when convenient and update `backend/.env`. Only `backend/.env` (gitignored) should ever hold a real key.
 
 **How to run & test (Windows, network-share repo):**
 - Backend API: `cd backend` → `uvicorn app.main:app --reload --port 8000` (needs deps installed + `.env`).
@@ -112,3 +114,9 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
   - `docs/AGENTS.md` — agent design, action allow-list, API, how to enable real Claude.
   - Tests: `tests/test_rebalance.py` — stub selection w/o key, propose→approve reorders by deadline, reject doesn't apply, can't decide twice, add_pretask creates front task. **Verified: ruff clean, 15 passed (no key/network needed).**
   - Human-gated by design: agents only ever propose; nothing applies until approve.
+- **Phase 5 — propose→approve UI** built:
+  - `frontend/src/types.ts` + `api.ts` — `RebalanceProposal`/`ProposalAction` types; `requestRebalance`, `listProposals`, `approveProposal`, `rejectProposal`.
+  - `frontend/src/pages/Proposals.tsx` — lists pending proposals, renders actions as a readable diff (resolves task titles), approve/reject.
+  - `Systems.tsx` — per-System **Rebalance** button + success notice; nav link + route added.
+  - **Verified:** local-disk `tsc` clean + `vite build` (37 modules). Backend propose→approve already covered by 15 tests.
+  - Handled the key-in-`.env.example` incident (see Security note above): reverted tracked file, created gitignored `backend/.env`, confirmed key absent from git history.

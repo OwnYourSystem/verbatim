@@ -65,3 +65,23 @@ export interface CheckIn {
   completed_task_ids: number[];
   created_at: string;
 }
+
+export type ProposalStatus = "pending" | "approved" | "rejected";
+
+export interface ProposalAction {
+  type: "reorder" | "add_pretask";
+  task_id?: number;
+  position?: number;
+  title?: string;
+}
+
+export interface RebalanceProposal {
+  id: number;
+  system_id: number;
+  trigger: string;
+  summary: string;
+  actions: ProposalAction[];
+  status: ProposalStatus;
+  created_at: string;
+  decided_at: string | null;
+}

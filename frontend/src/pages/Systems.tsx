@@ -8,6 +8,7 @@ export function Systems() {
   const [name, setName] = useState("");
   const [openId, setOpenId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const load = () =>
     api.listSystems().then(setSystems).catch((e) => setError(String(e)));
@@ -29,10 +30,25 @@ export function Systems() {
     load();
   };
 
+  const rebalance = async (s: System) => {
+    setNotice(null);
+    try {
+      await api.requestRebalance(s.id);
+      setNotice(`Agent proposed a rebalance for “${s.name}”. Review it on Proposals.`);
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Systems</h1>
       {error && <p className="text-amber-400 text-sm">{error}</p>}
+      {notice && (
+        <p className="text-emerald-400 text-sm bg-emerald-950/40 border border-emerald-800 rounded-md px-3 py-2">
+          {notice}
+        </p>
+      )}
 
       <Card title="Add a system">
         <div className="flex gap-2">
@@ -73,6 +89,13 @@ export function Systems() {
                 }
                 className="w-16 rounded-md bg-slate-900 border border-slate-700 p-1 text-sm"
               />
+              <button
+                onClick={() => rebalance(s)}
+                className="text-xs px-2 py-1 rounded-md bg-violet-700 hover:bg-violet-600"
+                title="Ask this system's agent to propose a rebalance"
+              >
+                Rebalance
+              </button>
               <button
                 onClick={async () => {
                   await api.deleteSystem(s.id);

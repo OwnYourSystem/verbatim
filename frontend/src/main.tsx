@@ -5,6 +5,7 @@ import { App } from "./App";
 import { Dashboard } from "./pages/Dashboard";
 import { Systems } from "./pages/Systems";
 import { Calendar } from "./pages/Calendar";
+import { Proposals } from "./pages/Proposals";
 import "./index.css";
 
 const router = createBrowserRouter([
@@ -15,6 +16,7 @@ const router = createBrowserRouter([
       { index: true, element: <Dashboard /> },
       { path: "systems", element: <Systems /> },
       { path: "calendar", element: <Calendar /> },
+      { path: "proposals", element: <Proposals /> },
     ],
   },
 ]);

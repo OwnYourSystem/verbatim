@@ -21,6 +21,9 @@ export function App() {
             <NavLink to="/calendar" className={linkClass}>
               Calendar
             </NavLink>
+            <NavLink to="/proposals" className={linkClass}>
+              Proposals
+            </NavLink>
           </nav>
         </div>
       </header>

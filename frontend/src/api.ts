@@ -1,6 +1,8 @@
 import type {
   CheckIn,
   FocusBlock,
+  ProposalStatus,
+  RebalanceProposal,
   Subtask,
   System,
   SystemStatus,
@@ -86,4 +88,16 @@ export const api = {
   // Check-ins
   createCheckIn: (body: { notes?: string; completed_task_ids: number[] }) =>
     request<CheckIn>("/check-ins", { method: "POST", body: JSON.stringify(body) }),
+
+  // Rebalance proposals (AI brain)
+  requestRebalance: (systemId: number) =>
+    request<RebalanceProposal>(`/systems/${systemId}/rebalance`, { method: "POST" }),
+  listProposals: (status?: ProposalStatus) =>
+    request<RebalanceProposal[]>(
+      `/rebalance-proposals${status ? `?status=${status}` : ""}`,
+    ),
+  approveProposal: (id: number) =>
+    request<RebalanceProposal>(`/rebalance-proposals/${id}/approve`, { method: "POST" }),
+  rejectProposal: (id: number) =>
+    request<RebalanceProposal>(`/rebalance-proposals/${id}/reject`, { method: "POST" }),
 };
