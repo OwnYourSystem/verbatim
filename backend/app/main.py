@@ -15,6 +15,7 @@ from app.api import (
     dashboard,
     intake,
     rebalance,
+    reports,
     systems,
     tasks,
 )
@@ -44,6 +45,7 @@ app.include_router(dashboard.router)
 app.include_router(checkins.router)
 app.include_router(rebalance.router)
 app.include_router(intake.router)
+app.include_router(reports.router)
 
 
 @app.get("/", tags=["meta"])

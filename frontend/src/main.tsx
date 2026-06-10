@@ -7,6 +7,7 @@ import { Systems } from "./pages/Systems";
 import { Calendar } from "./pages/Calendar";
 import { Proposals } from "./pages/Proposals";
 import { Intake } from "./pages/Intake";
+import { Reports } from "./pages/Reports";
 import "./index.css";
 
 const router = createBrowserRouter([
@@ -19,6 +20,7 @@ const router = createBrowserRouter([
       { path: "calendar", element: <Calendar /> },
       { path: "proposals", element: <Proposals /> },
       { path: "intake", element: <Intake /> },
+      { path: "reports", element: <Reports /> },
     ],
   },
 ]);

@@ -6,6 +6,7 @@ import type {
   IntakeStep,
   ProposalStatus,
   RebalanceProposal,
+  Report,
   Subtask,
   System,
   SystemStatus,
@@ -115,4 +116,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify(proposal),
     }),
+
+  // Reports
+  report: (kind: "weekly" | "monthly" | "on-demand" | "morning-briefing") =>
+    request<Report>(`/reports/${kind}`),
 };

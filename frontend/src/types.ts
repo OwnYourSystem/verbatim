@@ -120,3 +120,16 @@ export interface IntakeStep {
   question?: string | null;
   proposal?: IntakeProposal | null;
 }
+
+export interface ReportSection {
+  heading: string;
+  items: string[];
+}
+
+export interface Report {
+  type: string;
+  title: string;
+  generated_at: string;
+  summary: string;
+  sections: ReportSection[];
+}

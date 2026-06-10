@@ -6,9 +6,11 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 ## ▶ Resume here (read this first)
 
-**Status:** Phases 1–6 are **done, committed, pushed** to `origin/main`. Working tree clean (except local gitignored `backend/.env`). Part A (manual app) + most of Part B (AI brain) complete: propose→approve rebalancing AND the AI intake interview both work, with offline stubs when no key.
+**Status:** Phases 1–7 are **done, committed, pushed** to `origin/main`. Working tree clean (except local gitignored `backend/.env`, which now holds the user's rotated key). Reports + morning briefing + client-side notifications all work.
 
-**Do next:** **Phase 7 — Reports & push notifications.** Weekly report (Fri), monthly review (month-end), on-demand reports (all plain-language, generated from data; AI optional via the LLM interface). Web Push morning briefing via the PWA service worker. Add report endpoints + a Reports page; wire a service-worker push handler. Then Phase 8 (PWA polish + RN scaffold).
+**Do next:** **Phase 8 — PWA polish + RN scaffold** (offline shell, real PWA icons, mobile-viewport pass, scaffold `mobile/` Expo). OR jump to **Deploy** (Cloud SQL + Cloud Run + Vercel) — then Tier-2 server push (`docs/NOTIFICATIONS.md`). Ask the user which.
+
+**Live agent is ON:** `backend/.env` has a real (rotated) key, so `get_llm()`/`get_intake()` use real Claude when the backend runs. Not yet smoke-tested live (needs backend running against local Postgres). Tests stay offline via `tests/conftest.py`.
 
 **To enable the real Claude agent:** key already in local `backend/.env` (gitignored). `get_llm()` auto-switches StubLLM→AnthropicLLM. See `docs/AGENTS.md`.
 
@@ -127,3 +129,10 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
   - `tests/conftest.py` — **autouse fixture forces empty ANTHROPIC_API_KEY** so tests never use the dev `.env`/real API. (Fixed intake/rebalance tests that broke once `backend/.env` existed.)
   - Tests: `tests/test_intake.py` — one-question-at-a-time, first Q is name, commit persists tree. **Verified: ruff clean, 18 passed.**
   - Frontend: `pages/Intake.tsx` (conversational interview → review proposed system+tasks → "Create system"), `types.ts`/`api.ts` intake additions, nav "New system" + route. **Verified: vite build clean.**
+- **Phase 7 — reports & notifications** built:
+  - `app/reports.py` — deterministic generators: `weekly_report`, `monthly_report`, `on_demand_report`, `morning_briefing` (per-system stats, overdue/upcoming, completion %). `schemas.Report`/`ReportSection`.
+  - `api/reports.py` — `GET /reports/{weekly,monthly,on-demand,morning-briefing}`. Wired into `main.py`.
+  - Tests: `tests/test_reports.py` — structure + content (behind/coming, completion %, overdue, briefing focus, empty-DB safety). **Verified: ruff clean, 23 passed.**
+  - Frontend: `pages/Reports.tsx` (weekly/monthly/on-demand tabs + briefing section with Enable-notifications and Show-briefing-now via the SW). Nav "Reports" + route. **Verified: vite build clean.**
+  - `docs/NOTIFICATIONS.md` — Tier 1 (client notifications, done) vs Tier 2 (VAPID + pywebpush + scheduler, deploy-time).
+  - User rotated the exposed API key; new key in gitignored `backend/.env`.

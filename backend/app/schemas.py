@@ -281,6 +281,20 @@ class IntakeCommit(IntakeProposal):
     """The user-approved proposal to persist."""
 
 
+# ---- Reports ----
+class ReportSection(BaseModel):
+    heading: str
+    items: list[str]
+
+
+class Report(BaseModel):
+    type: str
+    title: str
+    generated_at: str
+    summary: str
+    sections: list[ReportSection]
+
+
 # ---- Dashboard ----
 class TodayView(BaseModel):
     day: date

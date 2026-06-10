@@ -27,6 +27,9 @@ export function App() {
             <NavLink to="/intake" className={linkClass}>
               New system
             </NavLink>
+            <NavLink to="/reports" className={linkClass}>
+              Reports
+            </NavLink>
           </nav>
         </div>
       </header>
