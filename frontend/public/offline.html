@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>MindAnchor — Offline</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background: #0f172a;
+        color: #f1f5f9;
+        font-family: system-ui, -apple-system, sans-serif;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        text-align: center;
+        gap: 1rem;
+      }
+      .anchor { font-size: 4rem; }
+      h1 { font-size: 1.5rem; font-weight: 700; }
+      p  { color: #94a3b8; font-size: 0.95rem; max-width: 320px; line-height: 1.6; }
+      button {
+        margin-top: 0.5rem;
+        padding: 0.6rem 1.4rem;
+        border-radius: 0.5rem;
+        background: #059669;
+        color: #fff;
+        font-size: 0.9rem;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+      }
+      button:hover { background: #10b981; }
+    </style>
+  </head>
+  <body>
+    <div class="anchor">⚓</div>
+    <h1>You're offline</h1>
+    <p>MindAnchor needs a connection to sync with the AI brain. Come back online to continue.</p>
+    <button onclick="location.reload()">Try again</button>
+  </body>
+</html>

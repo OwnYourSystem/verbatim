@@ -6,9 +6,9 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 ## ▶ Resume here (read this first)
 
-**Status:** Phases 1–7 are **done, committed, pushed** to `origin/main`. Working tree clean (except local gitignored `backend/.env`, which now holds the user's rotated key). Reports + morning briefing + client-side notifications all work.
+**Status:** Phases 1–8 are **done, committed, pushed** to `origin/claude/vibrant-gates-n8qbnf`. Phase 8 delivered: real PWA icons (SVG + 192/512/apple-touch), offline shell, full Workbox SW config, mobile-viewport nav, and a complete Expo RN scaffold in `mobile/`.
 
-**Do next:** **Phase 8 — PWA polish + RN scaffold** (offline shell, real PWA icons, mobile-viewport pass, scaffold `mobile/` Expo). OR jump to **Deploy** (Cloud SQL + Cloud Run + Vercel) — then Tier-2 server push (`docs/NOTIFICATIONS.md`). Ask the user which.
+**Do next:** **Phase 9 — Deploy** (Dockerfile + Cloud Run + Cloud SQL + Vercel + CI auto-deploy). Then Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
 
 **Live agent is ON:** `backend/.env` has a real (rotated) key, so `get_llm()`/`get_intake()` use real Claude when the backend runs. Not yet smoke-tested live (needs backend running against local Postgres). Tests stay offline via `tests/conftest.py`.
 
@@ -136,4 +136,13 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
   - Frontend: `pages/Reports.tsx` (weekly/monthly/on-demand tabs + briefing section with Enable-notifications and Show-briefing-now via the SW). Nav "Reports" + route. **Verified: vite build clean.**
   - `docs/NOTIFICATIONS.md` — Tier 1 (client notifications, done) vs Tier 2 (VAPID + pywebpush + scheduler, deploy-time).
   - User rotated the exposed API key; new key in gitignored `backend/.env`.
+- **Phase 8 — PWA polish + RN scaffold** built and pushed (branch `claude/vibrant-gates-n8qbnf`):
+  - **PWA icons:** `icon.svg` anchor design → rasterised to `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` (180×180), `favicon.png` (32×32) via cairosvg.
+  - **vite.config.ts:** added `maskable` icon purpose, `orientation`, `categories`; full Workbox config: precache all assets, navigation fallback → `index.html`, runtime StaleWhileRevalidate cache for `/api/*` (5 min / 50 entries).
+  - **index.html:** full PWA meta tags — `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, `viewport-fit=cover`, apple-touch-icon link.
+  - **public/offline.html:** offline fallback page (anchor emoji + "Try again" button, pure CSS, no deps).
+  - **App.tsx:** sticky header (`top-0 z-10`), nav strip `overflow-x-auto scrollbar-none` for mobile, `whitespace-nowrap` on links, `flex flex-col` wrapper, `pb-[env(safe-area-inset-bottom)]` for iOS safe area.
+  - **tailwind.config.js:** `scrollbar-none` plugin (hides scrollbar cross-browser).
+  - **mobile/** Expo scaffold: `app.json`, `package.json`, `babel.config.js`, `tsconfig.json`; Expo Router tab layout; 4 screens (TodayScreen, SystemsScreen, ProposalsScreen, ReportsScreen); shared `src/api/index.ts`, `src/types.ts`, `src/components/ui.tsx` (RN primitives), `src/hooks/useAsync.ts`; `mobile/README.md` with setup + run instructions.
+  - **Frontend build verified:** tsc clean, vite build ✅, PWA SW precaches 17 entries (269 KB).
 - **Docs refresh:** updated root `README.md` to current state — status (Phases 1–7 done), Features list, API overview table, phase checkmarks (1–7 ✅; 8 + deploy pending), a Documentation index, and a Quick start. README previously still showed only Phase 1 done.
