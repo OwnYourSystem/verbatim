@@ -67,29 +67,19 @@ jobs:
           retention-days: 1
 
   # ─────────────────────────────────────────────────────────────────────────
-  # 3. Deploy backend to Railway (main branch only)
-  #    Railway watches the repo directly and auto-deploys on push to main.
-  #    This job just runs the post-deploy migration via Railway CLI.
+  # 3. Deploy backend — Render auto-deploys on push to main via render.yaml.
+  #    This job triggers a deploy hook to ensure migrations run after build.
   # ─────────────────────────────────────────────────────────────────────────
   deploy-backend:
-    name: Deploy backend (Railway)
+    name: Deploy backend (Render)
     runs-on: ubuntu-latest
     needs: backend
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli --silent
-
-      - name: Run Alembic migrations
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      - name: Trigger Render deploy hook
         run: |
-          # Run migrations inside the Railway service after deploy completes.
-          # Railway auto-deploys on push; this step waits and then migrates.
-          railway run --service mindanchor-api alembic upgrade head
-        working-directory: backend
+          curl -s "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" > /dev/null
+          echo "Render deploy triggered"
 
   # ─────────────────────────────────────────────────────────────────────────
   # 4. Deploy frontend to Vercel (main branch only)
