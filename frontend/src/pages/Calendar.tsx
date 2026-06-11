@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { FocusBlock, System } from "../types";
-import { Card, Empty } from "../components/ui";
+import { Card, Empty, PageHeader } from "../components/ui";
 
 export function Calendar() {
   const [blocks, setBlocks] = useState<FocusBlock[]>([]);
@@ -38,8 +38,11 @@ export function Calendar() {
   }, {});
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Calendar</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Calendar"
+        subtitle="Reserve focus blocks so deep work actually happens."
+      />
       {error && <p className="text-amber-400 text-sm">{error}</p>}
 
       <Card title="Add a focus block">
@@ -48,14 +51,14 @@ export function Calendar() {
             type="date"
             value={day}
             onChange={(e) => setDay(e.target.value)}
-            className="rounded-md bg-slate-900 border border-slate-700 p-2 text-sm"
+            className="input-base"
           />
           <select
             value={systemId}
             onChange={(e) =>
               setSystemId(e.target.value === "" ? "" : Number(e.target.value))
             }
-            className="rounded-md bg-slate-900 border border-slate-700 p-2 text-sm"
+            className="input-base"
           >
             <option value="">(no system)</option>
             {systems.map((s) => (
@@ -65,15 +68,12 @@ export function Calendar() {
             ))}
           </select>
           <input
-            className="flex-1 rounded-md bg-slate-900 border border-slate-700 p-2 text-sm"
+            className="input-base flex-1"
             placeholder="Note (e.g. deep work)"
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
-          <button
-            onClick={add}
-            className="px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-sm font-medium"
-          >
+          <button onClick={add} className="btn-primary">
             Add
           </button>
         </div>
@@ -81,23 +81,32 @@ export function Calendar() {
 
       <Card title="Agenda">
         {Object.keys(byDay).length === 0 && <Empty>No focus blocks scheduled.</Empty>}
-        <div className="space-y-3">
+        <div className="space-y-4">
           {Object.entries(byDay)
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([d, items]) => (
-              <div key={d}>
-                <div className="text-sm font-medium text-slate-300">{d}</div>
-                <ul className="mt-1 space-y-1">
+              <div key={d} className="relative pl-5">
+                <span
+                  aria-hidden
+                  className="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 shadow shadow-emerald-500/40"
+                />
+                <div className="text-sm font-semibold text-slate-200">{d}</div>
+                <ul className="mt-1.5 space-y-1.5">
                   {items.map((b) => (
-                    <li key={b.id} className="flex items-center gap-2 text-sm">
-                      <span className="text-slate-400">{systemName(b.system_id)}</span>
+                    <li
+                      key={b.id}
+                      className="flex items-center gap-2 text-sm rounded-lg px-3 py-2 bg-slate-900/50 border border-slate-800 transition-colors hover:border-slate-700"
+                    >
+                      <span className="text-emerald-300/80 text-xs font-medium">
+                        {systemName(b.system_id)}
+                      </span>
                       <span className="flex-1">{b.note}</span>
                       <button
                         onClick={async () => {
                           await api.deleteFocusBlock(b.id);
                           load();
                         }}
-                        className="text-xs text-slate-500 hover:text-red-400"
+                        className="btn-ghost-danger"
                       >
                         ✕
                       </button>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { Report } from "../types";
-import { Card } from "../components/ui";
+import { Card, PageHeader } from "../components/ui";
 
 type Kind = "weekly" | "monthly" | "on-demand";
 
@@ -50,17 +50,19 @@ export function Reports() {
   const tabs: Kind[] = ["weekly", "monthly", "on-demand"];
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Reports</h1>
+    <div className="space-y-6">
+      <PageHeader title="Reports" subtitle="How each system is moving — behind, on track, or done." />
       {error && <p className="text-amber-400 text-sm">{error}</p>}
 
-      <div className="flex gap-1">
+      <div className="flex gap-1.5 p-1 rounded-xl bg-slate-900/70 border border-slate-800 w-fit">
         {tabs.map((t) => (
           <button
             key={t}
             onClick={() => setKind(t)}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium ${
-              kind === t ? "bg-slate-700 text-white" : "bg-slate-800 text-slate-300"
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium capitalize transition-all duration-200 ${
+              kind === t
+                ? "bg-slate-700 text-emerald-300 shadow"
+                : "text-slate-400 hover:text-slate-200"
             }`}
           >
             {t.replace("-", " ")}
@@ -72,15 +74,18 @@ export function Reports() {
         <Card title={report.title}>
           <p className="text-sm text-slate-300">{report.summary}</p>
           <p className="text-xs text-slate-500 mt-1">Generated {report.generated_at}</p>
-          <div className="mt-4 space-y-4">
+          <div className="mt-5 space-y-5">
             {report.sections.map((s, i) => (
               <div key={i}>
-                <h3 className="text-xs uppercase tracking-wide text-slate-500 mb-1">
+                <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 mb-2">
                   {s.heading}
                 </h3>
-                <ul className="space-y-1 text-sm list-disc pl-5">
+                <ul className="space-y-1.5 text-sm">
                   {s.items.map((item, j) => (
-                    <li key={j}>{item}</li>
+                    <li key={j} className="flex gap-2.5">
+                      <span aria-hidden className="text-emerald-400/70 mt-0.5">▸</span>
+                      {item}
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -92,25 +97,19 @@ export function Reports() {
       )}
 
       <Card title="Morning briefing & notifications">
-        <p className="text-sm text-slate-400 mb-3">
+        <p className="text-sm text-slate-400 mb-4">
           Enable browser notifications, then preview today's briefing. (Scheduled
           server push is a deploy-time feature — see docs/NOTIFICATIONS.md.)
         </p>
         <div className="flex gap-2">
-          <button
-            onClick={enableNotifications}
-            className="px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-sm font-medium"
-          >
+          <button onClick={enableNotifications} className="btn-secondary">
             Enable notifications
           </button>
-          <button
-            onClick={showBriefing}
-            className="px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-sm font-medium"
-          >
+          <button onClick={showBriefing} className="btn-primary">
             Show briefing now
           </button>
         </div>
-        {notifStatus && <p className="text-sm text-slate-400 mt-2">{notifStatus}</p>}
+        {notifStatus && <p className="text-sm text-slate-400 mt-3">{notifStatus}</p>}
       </Card>
     </div>
   );

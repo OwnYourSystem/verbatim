@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { TodayView } from "../types";
-import { Card, Empty, StatusBadge } from "../components/ui";
+import { Card, Empty, PageHeader, StatusBadge } from "../components/ui";
 
 export function Dashboard() {
   const [data, setData] = useState<TodayView | null>(null);
@@ -45,27 +45,36 @@ export function Dashboard() {
   if (!data) return <p className="text-slate-400 text-sm">Loading…</p>;
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Today · {data.day}</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title={<>Today <span className="text-slate-600 font-medium">·</span> <span className="text-gradient">{data.day}</span></>}
+        subtitle="Your single point of focus for the day."
+      />
 
       <Card title="Today's focus">
         {data.focus_system ? (
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold">{data.focus_system.name}</span>
-              <span className="text-xs text-slate-400">
+            <div className="flex items-center gap-3">
+              <span className="text-lg font-bold">{data.focus_system.name}</span>
+              <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/40">
                 priority {data.focus_system.current_priority ?? "—"}
               </span>
             </div>
-            <ul className="mt-3 space-y-2">
+            <ul className="mt-4 space-y-2.5">
               {data.focus_tasks.map((t) => (
-                <li key={t.id} className="flex items-center gap-3">
+                <li
+                  key={t.id}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 bg-slate-900/50 border border-slate-800 transition-colors hover:border-slate-700"
+                >
                   <input
                     type="checkbox"
                     checked={selected.has(t.id)}
                     onChange={() => toggle(t.id)}
+                    className="h-4 w-4 rounded accent-emerald-500"
                   />
-                  <span className="flex-1">{t.title}</span>
+                  <span className={`flex-1 ${selected.has(t.id) ? "line-through text-slate-500" : ""}`}>
+                    {t.title}
+                  </span>
                   {t.deadline && (
                     <span className="text-xs text-slate-400">{t.deadline}</span>
                   )}
@@ -82,13 +91,15 @@ export function Dashboard() {
         )}
       </Card>
 
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-2 gap-6">
         <Card title="Upcoming deadlines (next 7 days)">
-          <ul className="space-y-2">
+          <ul className="space-y-2.5">
             {data.upcoming_deadlines.map((t) => (
-              <li key={t.id} className="flex justify-between text-sm">
+              <li key={t.id} className="flex justify-between items-center text-sm">
                 <span>{t.title}</span>
-                <span className="text-slate-400">{t.deadline}</span>
+                <span className="text-xs font-medium text-amber-300/90 bg-amber-500/10 border border-amber-500/30 rounded-full px-2.5 py-0.5">
+                  {t.deadline}
+                </span>
               </li>
             ))}
             {data.upcoming_deadlines.length === 0 && <Empty>Nothing due soon.</Empty>}
@@ -96,9 +107,9 @@ export function Dashboard() {
         </Card>
 
         <Card title="Flagged (overdue or blocked)">
-          <ul className="space-y-2">
+          <ul className="space-y-2.5">
             {data.flagged.map((t) => (
-              <li key={t.id} className="flex justify-between text-sm">
+              <li key={t.id} className="flex justify-between items-center text-sm">
                 <span>{t.title}</span>
                 <StatusBadge status={t.status} />
               </li>
@@ -109,21 +120,17 @@ export function Dashboard() {
       </div>
 
       <Card title="End-of-day check-in">
-        <p className="text-sm text-slate-400 mb-2">
+        <p className="text-sm text-slate-400 mb-3">
           Tick what you completed above, add a note, and close the loop.
         </p>
         <textarea
-          className="w-full rounded-md bg-slate-900 border border-slate-700 p-2 text-sm"
+          className="input-base w-full"
           rows={2}
           placeholder="What got done today?"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />
-        <button
-          onClick={submitCheckIn}
-          disabled={saving}
-          className="mt-2 px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-sm font-medium disabled:opacity-50"
-        >
+        <button onClick={submitCheckIn} disabled={saving} className="btn-primary mt-3">
           {saving ? "Saving…" : `Submit check-in (${selected.size} done)`}
         </button>
       </Card>
