@@ -1,6 +1,7 @@
 """Application configuration, loaded from environment variables.
 
 Copy backend/.env.example to backend/.env and fill in values for local dev.
+In production (Cloud Run) all values are injected as env vars / secrets.
 """
 from __future__ import annotations
 
@@ -17,11 +18,12 @@ class Settings(BaseSettings):
     # App
     app_name: str = "MindAnchor"
     environment: str = "development"
-    debug: bool = True
+    debug: bool = False
 
-    # Database — Google Cloud SQL (PostgreSQL).
-    # Local dev can point at a Cloud SQL Auth Proxy on localhost, or a local Postgres.
-    # Example: postgresql+psycopg2://user:pass@localhost:5432/mindanchor
+    # Database — Google Cloud SQL (PostgreSQL) in prod; local Postgres in dev.
+    # Cloud Run: set via Secret Manager secret mounted as DATABASE_URL env var.
+    # Cloud SQL socket path example:
+    #   postgresql+psycopg2://user:pass@/mindanchor?host=/cloudsql/PROJECT:REGION:INSTANCE
     database_url: str = "postgresql+psycopg2://mindanchor:mindanchor@localhost:5432/mindanchor"
 
     # Auth (single-user JWT)
@@ -34,7 +36,7 @@ class Settings(BaseSettings):
     model_planning: str = "claude-opus-4-8"
     model_fast: str = "claude-sonnet-4-6"
 
-    # CORS — frontend origins allowed to call the API
+    # CORS — comma-separated in env: CORS_ORIGINS=https://mindanchor.vercel.app,https://custom.domain
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 

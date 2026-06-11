@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+tests/
+alembic/versions/__pycache__/
+*.db
+*.sqlite3
+README.md

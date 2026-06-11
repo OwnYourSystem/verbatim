@@ -6,9 +6,9 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 ## ▶ Resume here (read this first)
 
-**Status:** Phases 1–8 are **done, committed, pushed** to `origin/claude/vibrant-gates-n8qbnf`. Phase 8 delivered: real PWA icons (SVG + 192/512/apple-touch), offline shell, full Workbox SW config, mobile-viewport nav, and a complete Expo RN scaffold in `mobile/`.
+**Status:** Phases 1–9 are **done, committed, pushed** to `origin/claude/vibrant-gates-n8qbnf`. All code is production-ready — deploy by following `docs/DEPLOY.md`.
 
-**Do next:** **Phase 9 — Deploy** (Dockerfile + Cloud Run + Cloud SQL + Vercel + CI auto-deploy). Then Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
+**Do next:** Run `deploy/cloudsql-setup.sh` with your GCP project, add the 7 GitHub Actions secrets, push to `main` → full CI/CD pipeline fires automatically. Then Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
 
 **Live agent is ON:** `backend/.env` has a real (rotated) key, so `get_llm()`/`get_intake()` use real Claude when the backend runs. Not yet smoke-tested live (needs backend running against local Postgres). Tests stay offline via `tests/conftest.py`.
 
@@ -136,6 +136,17 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
   - Frontend: `pages/Reports.tsx` (weekly/monthly/on-demand tabs + briefing section with Enable-notifications and Show-briefing-now via the SW). Nav "Reports" + route. **Verified: vite build clean.**
   - `docs/NOTIFICATIONS.md` — Tier 1 (client notifications, done) vs Tier 2 (VAPID + pywebpush + scheduler, deploy-time).
   - User rotated the exposed API key; new key in gitignored `backend/.env`.
+- **Phase 9 — Deploy** built and pushed (branch `claude/vibrant-gates-n8qbnf`):
+  - `backend/Dockerfile` — multi-stage (builder + runtime), non-root user, psycopg2-binary, PORT env var for Cloud Run.
+  - `backend/.dockerignore` — excludes `.env`, tests, caches, `__pycache__`.
+  - `backend/app/core/config.py` — `debug=False` default; CORS from env; Cloud SQL socket path documented.
+  - `backend/alembic/versions/0001_initial_schema.py` — initial migration for all 9 tables + indexes; ruff-clean.
+  - `frontend/vercel.json` — `/api/*` rewrite proxy to Cloud Run URL; SW `Cache-Control` headers; immutable asset cache.
+  - `.github/workflows/ci.yml` — extended to 5 jobs: backend lint+test → frontend build → Docker build+push (Artifact Registry) → Cloud Run deploy + `alembic upgrade head` as Cloud Run Job → Vercel deploy (pre-built dist); Workload Identity Federation (keyless auth).
+  - `deploy/cloudrun.yaml` — Cloud Run service manifest (scale-to-zero, 512 MB, Cloud SQL sidecar, Secret Manager refs).
+  - `deploy/cloudsql-setup.sh` — one-shot infra script: enable APIs, create Cloud SQL, DB + user, Secret Manager secrets, Artifact Registry, service account + IAM.
+  - `docs/DEPLOY.md` — full deployment guide: architecture diagram, step-by-step setup, Workload Identity Federation, cost table (~$8–10/mo), env var reference.
+  - **Verified:** `ruff check` clean; 23 pytest tests pass.
 - **Phase 8 — PWA polish + RN scaffold** built and pushed (branch `claude/vibrant-gates-n8qbnf`):
   - **PWA icons:** `icon.svg` anchor design → rasterised to `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` (180×180), `favicon.png` (32×32) via cairosvg.
   - **vite.config.ts:** added `maskable` icon purpose, `orientation`, `categories`; full Workbox config: precache all assets, navigation fallback → `index.html`, runtime StaleWhileRevalidate cache for `/api/*` (5 min / 50 entries).
