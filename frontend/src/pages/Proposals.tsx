@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { ProposalAction, RebalanceProposal, System, Task } from "../types";
-import { Card, Empty } from "../components/ui";
+import { Card, Empty, PageHeader } from "../components/ui";
 
 export function Proposals() {
   const [proposals, setProposals] = useState<RebalanceProposal[]>([]);
@@ -53,11 +53,11 @@ export function Proposals() {
   };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Proposals</h1>
-      <p className="text-sm text-slate-400">
-        The AI brain proposes changes; nothing is applied until you approve.
-      </p>
+    <div className="space-y-6">
+      <PageHeader
+        title="Proposals"
+        subtitle="The AI brain proposes changes; nothing is applied until you approve."
+      />
       {error && <p className="text-amber-400 text-sm">{error}</p>}
 
       {proposals.length === 0 && (
@@ -68,19 +68,27 @@ export function Proposals() {
 
       {proposals.map((p) => (
         <Card key={p.id}>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="font-semibold">
+          <div className="flex items-center gap-2.5 mb-2">
+            <span className="h-7 w-7 rounded-lg bg-gradient-to-br from-violet-500/30 to-fuchsia-500/20 border border-violet-500/40 flex items-center justify-center text-sm" aria-hidden>
+              🤖
+            </span>
+            <span className="font-bold">
               {systems[p.system_id]?.name ?? `System #${p.system_id}`}
             </span>
-            <span className="text-xs text-slate-500">· {p.trigger}</span>
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-400 border border-slate-600/60">
+              {p.trigger}
+            </span>
           </div>
           <p className="text-sm text-slate-300">{p.summary}</p>
 
           {p.actions.length > 0 ? (
-            <ul className="mt-3 space-y-1 text-sm">
+            <ul className="mt-4 space-y-1.5 text-sm">
               {p.actions.map((a, i) => (
-                <li key={i} className="flex gap-2">
-                  <span className="text-slate-500">→</span>
+                <li
+                  key={i}
+                  className="flex gap-2.5 rounded-lg px-3 py-2 bg-slate-900/50 border border-slate-800"
+                >
+                  <span className="text-violet-400">→</span>
                   <span>{describe(a)}</span>
                 </li>
               ))}
@@ -89,18 +97,18 @@ export function Proposals() {
             <p className="mt-3 text-sm text-slate-500">No actionable changes proposed.</p>
           )}
 
-          <div className="mt-4 flex gap-2">
+          <div className="mt-5 flex gap-2">
             <button
               disabled={busy === p.id}
               onClick={() => decide(p.id, true)}
-              className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-sm font-medium disabled:opacity-50"
+              className="btn-primary"
             >
               Approve
             </button>
             <button
               disabled={busy === p.id}
               onClick={() => decide(p.id, false)}
-              className="px-3 py-1.5 rounded-md bg-slate-700 hover:bg-slate-600 text-sm font-medium disabled:opacity-50"
+              className="btn-secondary"
             >
               Reject
             </button>

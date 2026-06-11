@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { Subtask, System, Task } from "../types";
-import { Card, Empty, StatusBadge } from "../components/ui";
+import { Card, Empty, PageHeader, StatusBadge } from "../components/ui";
 
 export function Systems() {
   const [systems, setSystems] = useState<System[]>([]);
@@ -41,11 +41,14 @@ export function Systems() {
   };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Systems</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Systems"
+        subtitle="Your top-level work domains, each with its own priority and agent."
+      />
       {error && <p className="text-amber-400 text-sm">{error}</p>}
       {notice && (
-        <p className="text-emerald-400 text-sm bg-emerald-950/40 border border-emerald-800 rounded-md px-3 py-2">
+        <p className="animate-fade-up text-emerald-300 text-sm bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-3">
           {notice}
         </p>
       )}
@@ -53,30 +56,28 @@ export function Systems() {
       <Card title="Add a system">
         <div className="flex gap-2">
           <input
-            className="flex-1 rounded-md bg-slate-900 border border-slate-700 p-2 text-sm"
+            className="input-base flex-1"
             placeholder="e.g. SAP Datasphere CLI"
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addSystem()}
           />
-          <button
-            onClick={addSystem}
-            className="px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-sm font-medium"
-          >
+          <button onClick={addSystem} className="btn-primary">
             Add
           </button>
         </div>
       </Card>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {systems.map((s) => (
           <Card key={s.id}>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setOpenId(openId === s.id ? null : s.id)}
-                className="font-semibold flex-1 text-left"
+                className="font-semibold flex-1 text-left transition-colors hover:text-emerald-300"
               >
-                {openId === s.id ? "▾" : "▸"} {s.name}
+                <span className="text-slate-500 mr-1.5">{openId === s.id ? "▾" : "▸"}</span>
+                {s.name}
               </button>
               <label className="text-xs text-slate-400">priority</label>
               <input
@@ -87,11 +88,11 @@ export function Systems() {
                 onBlur={(e) =>
                   e.target.value && setPriority(s, Number(e.target.value))
                 }
-                className="w-16 rounded-md bg-slate-900 border border-slate-700 p-1 text-sm"
+                className="input-base w-16 !py-1"
               />
               <button
                 onClick={() => rebalance(s)}
-                className="text-xs px-2 py-1 rounded-md bg-violet-700 hover:bg-violet-600"
+                className="btn-accent !px-3 !py-1.5 !text-xs"
                 title="Ask this system's agent to propose a rebalance"
               >
                 Rebalance
@@ -101,7 +102,7 @@ export function Systems() {
                   await api.deleteSystem(s.id);
                   load();
                 }}
-                className="text-xs text-slate-500 hover:text-red-400"
+                className="btn-ghost-danger"
               >
                 delete
               </button>
@@ -138,10 +139,10 @@ function TaskManager({ systemId }: { systemId: number }) {
   };
 
   return (
-    <div className="mt-3 pl-4 border-l border-slate-700 space-y-3">
+    <div className="mt-4 pl-4 border-l-2 border-emerald-500/20 space-y-3">
       <div className="flex gap-2">
         <input
-          className="flex-1 rounded-md bg-slate-900 border border-slate-700 p-1.5 text-sm"
+          className="input-base flex-1 !py-1.5"
           placeholder="New task"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -149,14 +150,11 @@ function TaskManager({ systemId }: { systemId: number }) {
         />
         <input
           type="date"
-          className="rounded-md bg-slate-900 border border-slate-700 p-1.5 text-sm"
+          className="input-base !py-1.5"
           value={deadline}
           onChange={(e) => setDeadline(e.target.value)}
         />
-        <button
-          onClick={addTask}
-          className="px-3 rounded-md bg-blue-600 hover:bg-blue-500 text-sm"
-        >
+        <button onClick={addTask} className="btn-secondary !px-3 !py-1.5">
           Add
         </button>
       </div>
@@ -185,7 +183,7 @@ function TaskRow({ task, onChange }: { task: Task; onChange: () => void }) {
 
   return (
     <div>
-      <div className="flex items-center gap-2 text-sm">
+      <div className="flex items-center gap-2 text-sm rounded-lg px-2 py-1.5 transition-colors hover:bg-slate-900/60">
         <button onClick={() => setOpen(!open)} className="text-slate-500">
           {open ? "▾" : "▸"}
         </button>
@@ -199,7 +197,7 @@ function TaskRow({ task, onChange }: { task: Task; onChange: () => void }) {
             await api.deleteTask(task.id);
             onChange();
           }}
-          className="text-xs text-slate-500 hover:text-red-400"
+          className="btn-ghost-danger"
         >
           ✕
         </button>
@@ -217,7 +215,7 @@ function TaskRow({ task, onChange }: { task: Task; onChange: () => void }) {
                   await api.deleteSubtask(st.id);
                   loadSubs();
                 }}
-                className="text-xs text-slate-500 hover:text-red-400"
+                className="btn-ghost-danger"
               >
                 ✕
               </button>
@@ -225,7 +223,7 @@ function TaskRow({ task, onChange }: { task: Task; onChange: () => void }) {
           ))}
           <div className="flex gap-2 pt-1">
             <input
-              className="flex-1 rounded-md bg-slate-900 border border-slate-700 p-1 text-sm"
+              className="input-base flex-1 !py-1"
               placeholder="New subtask"
               value={subTitle}
               onChange={(e) => setSubTitle(e.target.value)}
