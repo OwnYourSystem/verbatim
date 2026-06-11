@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://RAILWAY_BACKEND_URL/:path*"
+      "destination": "https://mindanchor-api.onrender.com/:path*"
     },
     {
       "source": "/(.*)",

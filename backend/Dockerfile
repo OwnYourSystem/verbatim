@@ -32,5 +32,5 @@ ENV PORT=8080
 RUN adduser --disabled-password --gecos "" appuser
 USER appuser
 
-# Tini-less single-process: uvicorn with workers=1 (Cloud Run handles scaling via instances)
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1"]
+# Run migrations then start server
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1"]
