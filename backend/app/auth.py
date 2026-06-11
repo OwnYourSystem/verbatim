@@ -7,13 +7,13 @@ Every other route uses Depends(get_current_user).  The dependency verifies
 the JWT signature and expiry; raises HTTP 401 on any failure.
 
 Environment variables (set in Render, never committed):
-  PASSWORD_HASH   bcrypt hash of the owner's password
-                  Generate with:  python -c "from passlib.hash import bcrypt; print(bcrypt.hash('yourpassword'))"
+  PASSWORD_HASH   bcrypt hash of the owner's password — generate with:
+                  python -c "from passlib.hash import bcrypt; print(bcrypt.hash('pw'))"
   JWT_SECRET      32+ random bytes, e.g. openssl rand -hex 32
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -37,7 +37,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token() -> str:
     settings = get_settings()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
+    expire = datetime.now(UTC) + timedelta(minutes=settings.jwt_expire_minutes)
     payload = {"sub": "owner", "exp": expire}
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
@@ -66,9 +66,9 @@ def get_current_user(
         if sub != "owner":
             raise JWTError("bad subject")
         return sub
-    except JWTError:
+    except JWTError as err:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from err
