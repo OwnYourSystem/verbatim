@@ -1,4 +1,7 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { clearToken, getToken } from "./api";
+import { Login } from "./pages/Login";
 
 const NAV = [
   { to: "/", end: true, label: "Today", icon: "☀️" },
@@ -36,7 +39,30 @@ function Logo() {
   );
 }
 
+function SignOutButton() {
+  const navigate = useNavigate();
+  const handleSignOut = () => {
+    clearToken();
+    navigate("/");
+    window.location.reload();
+  };
+  return (
+    <button
+      onClick={handleSignOut}
+      className="text-[11px] text-slate-600 hover:text-slate-400 transition-colors text-left"
+    >
+      Sign out
+    </button>
+  );
+}
+
 export function App() {
+  const [authed, setAuthed] = useState(() => Boolean(getToken()));
+
+  if (!authed) {
+    return <Login onSuccess={() => setAuthed(true)} />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col md:flex-row">
       {/* Ambient background glow */}
@@ -58,8 +84,9 @@ export function App() {
             </NavLink>
           ))}
         </nav>
-        <div className="mt-auto px-1 text-[11px] text-slate-600">
-          Your external brain
+        <div className="mt-auto px-1 space-y-1">
+          <p className="text-[11px] text-slate-600">Your external brain</p>
+          <SignOutButton />
         </div>
       </aside>
 

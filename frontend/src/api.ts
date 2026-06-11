@@ -17,17 +17,56 @@ import type {
 
 const BASE = "/api";
 
+// ── Token storage ────────────────────────────────────────────────────────────
+
+const TOKEN_KEY = "ma_token";
+
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+// ── Core fetch ───────────────────────────────────────────────────────────────
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+  const token = getToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE}${path}`, { headers, ...options });
+
+  if (res.status === 401) {
+    clearToken();
+    // Signal the app to show login — simple page reload works for a SPA with a route guard
+    window.location.href = "/login";
+    throw new Error("Unauthenticated");
+  }
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`${res.status} ${res.statusText}: ${text}`);
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+
+export async function login(password: string): Promise<void> {
+  const res = await fetch(`${BASE}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+  if (!res.ok) throw new Error("Incorrect password");
+  const { access_token } = await res.json();
+  setToken(access_token);
 }
 
 export const api = {

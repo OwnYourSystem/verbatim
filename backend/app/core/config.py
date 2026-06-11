@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24 * 7  # 7 days
+    # bcrypt hash of the owner password — generate with:
+    #   python -c "from passlib.hash import bcrypt; print(bcrypt.hash('yourpassword'))"
+    password_hash: str = ""
 
     # Anthropic Claude
     anthropic_api_key: str = ""

@@ -1,11 +1,7 @@
-"""MindAnchor backend entry point.
-
-Phase 1: a minimal, runnable FastAPI app with health endpoints and CORS.
-Data models, CRUD routes, and the agent layer arrive in later phases.
-"""
+"""MindAnchor backend entry point."""
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
@@ -19,6 +15,8 @@ from app.api import (
     systems,
     tasks,
 )
+from app.api import auth as auth_router
+from app.auth import get_current_user
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -37,15 +35,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(systems.router)
-app.include_router(tasks.router)
-app.include_router(calendar.router)
-app.include_router(agents.router)
-app.include_router(dashboard.router)
-app.include_router(checkins.router)
-app.include_router(rebalance.router)
-app.include_router(intake.router)
-app.include_router(reports.router)
+# Public routes — no auth required
+app.include_router(auth_router.router)
+
+# Protected routes — every request must carry a valid JWT
+_auth = [Depends(get_current_user)]
+app.include_router(systems.router, dependencies=_auth)
+app.include_router(tasks.router, dependencies=_auth)
+app.include_router(calendar.router, dependencies=_auth)
+app.include_router(agents.router, dependencies=_auth)
+app.include_router(dashboard.router, dependencies=_auth)
+app.include_router(checkins.router, dependencies=_auth)
+app.include_router(rebalance.router, dependencies=_auth)
+app.include_router(intake.router, dependencies=_auth)
+app.include_router(reports.router, dependencies=_auth)
 
 
 @app.get("/", tags=["meta"])
