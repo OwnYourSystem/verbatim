@@ -111,6 +111,60 @@ function SkeletonReport() {
   );
 }
 
+/** KPI stat strip — derived from the report sections we actually have (no fake data). */
+function StatStrip({ report }: { report: Report }) {
+  const find = (h: string) =>
+    report.sections.find((s) => s.heading.toLowerCase().trim() === h);
+  const behind = find("behind")?.items.length ?? 0;
+  const coming = find("coming up")?.items.length ?? 0;
+  const completionItems = find("completion")?.items ?? [];
+  const pcts = completionItems
+    .map((i) => i.match(/(\d+)%/)?.[1])
+    .filter(Boolean)
+    .map(Number);
+  const avg = pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length) : null;
+
+  const stats: { label: string; value: string; unit: string; semantic: Semantic }[] = [
+    { label: "Behind", value: String(behind), unit: behind === 1 ? "item" : "items", semantic: behind > 0 ? "crit" : "ok" },
+    { label: "Coming up", value: String(coming), unit: coming === 1 ? "deadline" : "deadlines", semantic: coming > 0 ? "warn" : "idle" },
+    {
+      label: "Avg completion",
+      value: avg != null ? String(avg) : "—",
+      unit: avg != null ? "%" : "",
+      semantic: avg == null ? "idle" : avg >= 80 ? "ok" : avg >= 40 ? "warn" : "crit",
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-3 gap-4 animate-fade-up">
+      {stats.map((st) => {
+        const s = SEMANTIC_STYLES[st.semantic];
+        return (
+          <div
+            key={st.label}
+            className="rounded-2xl p-4"
+            style={{ background: "rgba(8,12,24,0.6)", border: "1px solid rgba(120,140,220,0.12)" }}
+          >
+            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-2" style={{ color: "var(--color-signal-idle)" }}>
+              {st.label}
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="metric text-3xl md:text-4xl" style={{ color: s.color }}>
+                {st.value}
+              </span>
+              {st.unit && (
+                <span className="metric text-xs" style={{ color: "rgba(200,210,255,0.5)" }}>
+                  {st.unit}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const TABS: Kind[] = ["weekly", "monthly", "on-demand"];
 
 function SlidingTabBar({ active, onChange }: { active: Kind; onChange: (k: Kind) => void }) {
@@ -221,6 +275,8 @@ export function Reports() {
       {error && <p className="text-amber-400 text-sm">{error}</p>}
 
       <SlidingTabBar active={kind} onChange={setKind} />
+
+      {report && <StatStrip report={report} />}
 
       {report ? (
         <div className="glass-panel p-6 animate-fade-up" role="tabpanel">
