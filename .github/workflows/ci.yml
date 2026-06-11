@@ -6,15 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-# ---------------------------------------------------------------------------
-# Shared env — override in repo secrets for production
-# ---------------------------------------------------------------------------
-env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  REGION: ${{ secrets.GCP_REGION || 'europe-west1' }}
-  AR_REPO: mindanchor
-  SERVICE_NAME: mindanchor-api
-
 jobs:
   # ─────────────────────────────────────────────────────────────────────────
   # 1. Backend — lint + test
@@ -68,7 +59,6 @@ jobs:
         run: npm run build
 
       - name: Upload dist artifact
-        # Only on main — deploy job picks this up
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
@@ -77,129 +67,38 @@ jobs:
           retention-days: 1
 
   # ─────────────────────────────────────────────────────────────────────────
-  # 3. Docker build + push to Artifact Registry (main branch only)
-  # ─────────────────────────────────────────────────────────────────────────
-  docker:
-    name: Docker (build + push)
-    runs-on: ubuntu-latest
-    needs: [backend, frontend]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    permissions:
-      contents: read
-      id-token: write   # Workload Identity Federation
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
-
-      - name: Build and push Docker image
-        run: |
-          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/api"
-          docker build \
-            --tag "${IMAGE}:${{ github.sha }}" \
-            --tag "${IMAGE}:latest" \
-            ./backend
-          docker push "${IMAGE}:${{ github.sha }}"
-          docker push "${IMAGE}:latest"
-          echo "IMAGE=${IMAGE}:${{ github.sha }}" >> $GITHUB_ENV
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # 4. Deploy backend to Cloud Run (main branch only)
+  # 3. Deploy backend to Railway (main branch only)
+  #    Railway watches the repo directly and auto-deploys on push to main.
+  #    This job just runs the post-deploy migration via Railway CLI.
   # ─────────────────────────────────────────────────────────────────────────
   deploy-backend:
-    name: Deploy backend (Cloud Run)
+    name: Deploy backend (Railway)
     runs-on: ubuntu-latest
-    needs: docker
+    needs: backend
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    permissions:
-      contents: read
-      id-token: write
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-
-      - name: Deploy to Cloud Run
-        run: |
-          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/api:${{ github.sha }}"
-          gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image "$IMAGE" \
-            --region "${{ env.REGION }}" \
-            --platform managed \
-            --allow-unauthenticated \
-            --min-instances 0 \
-            --max-instances 3 \
-            --memory 512Mi \
-            --cpu 1 \
-            --port 8080 \
-            --set-cloudsql-instances "${{ env.PROJECT_ID }}:${{ env.REGION }}:mindanchor-db" \
-            --service-account "mindanchor-api@${{ env.PROJECT_ID }}.iam.gserviceaccount.com" \
-            --set-secrets "DATABASE_URL=mindanchor-db-url:latest" \
-            --set-secrets "JWT_SECRET=mindanchor-jwt-secret:latest" \
-            --set-secrets "ANTHROPIC_API_KEY=mindanchor-anthropic-key:latest" \
-            --set-secrets "CORS_ORIGINS=mindanchor-cors-origins:latest" \
-            --set-env-vars "ENVIRONMENT=production" \
-            --project "${{ env.PROJECT_ID }}"
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli --silent
 
       - name: Run Alembic migrations
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          # Use Cloud SQL Auth Proxy sidecar via gcloud sql connect alternative:
-          # Cloud Run Jobs would be ideal here; for now we run migrations as a
-          # one-off Cloud Run job using the same image.
-          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/api:${{ github.sha }}"
-          gcloud run jobs create mindanchor-migrate-${{ github.sha }} \
-            --image "$IMAGE" \
-            --region "${{ env.REGION }}" \
-            --set-cloudsql-instances "${{ env.PROJECT_ID }}:${{ env.REGION }}:mindanchor-db" \
-            --service-account "mindanchor-api@${{ env.PROJECT_ID }}.iam.gserviceaccount.com" \
-            --set-secrets "DATABASE_URL=mindanchor-db-url:latest" \
-            --command "alembic" \
-            --args "upgrade,head" \
-            --max-retries 1 \
-            --project "${{ env.PROJECT_ID }}" \
-            --execute-now \
-            --wait || true
-          # Clean up old migration jobs (keep last 3)
-          gcloud run jobs list \
-            --region "${{ env.REGION }}" \
-            --project "${{ env.PROJECT_ID }}" \
-            --filter "metadata.name~mindanchor-migrate" \
-            --format "value(metadata.name)" \
-            | sort -r | tail -n +4 \
-            | xargs -I {} gcloud run jobs delete {} \
-              --region "${{ env.REGION }}" \
-              --project "${{ env.PROJECT_ID }}" \
-              --quiet || true
-
-      - name: Print service URL
-        run: |
-          gcloud run services describe ${{ env.SERVICE_NAME }} \
-            --region "${{ env.REGION }}" \
-            --project "${{ env.PROJECT_ID }}" \
-            --format "value(status.url)"
+          # Run migrations inside the Railway service after deploy completes.
+          # Railway auto-deploys on push; this step waits and then migrates.
+          railway run --service mindanchor-api alembic upgrade head
+        working-directory: backend
 
   # ─────────────────────────────────────────────────────────────────────────
-  # 5. Deploy frontend to Vercel (main branch only)
+  # 4. Deploy frontend to Vercel (main branch only)
   # ─────────────────────────────────────────────────────────────────────────
   deploy-frontend:
     name: Deploy frontend (Vercel)
     runs-on: ubuntu-latest
     needs: [frontend, deploy-backend]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
     steps:
       - uses: actions/checkout@v4
 
