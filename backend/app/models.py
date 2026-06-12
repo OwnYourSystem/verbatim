@@ -12,9 +12,11 @@ from datetime import date, datetime, time
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     Date,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -57,6 +59,32 @@ class TimestampMixin:
         onupdate=func.now(),
         nullable=False,
     )
+
+
+class WorkItemMixin:
+    """Shared, fully-editable attributes for both Tasks and Subtasks.
+
+    Priority hierarchy: 1 = highest, 5 = lowest (see CR-1 §10).
+    `dedicated_hours` is the planned budget; hours actually spent are summed from
+    TimeLog rows, and the difference (remaining) is surfaced in the Report layer.
+    `last_checkpoint` records the functional phase (Planning/Development/Testing/
+    Staging/Production) as free text.
+    """
+
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[WorkStatus] = mapped_column(
+        Enum(WorkStatus), default=WorkStatus.todo, nullable=False
+    )
+    priority: Mapped[int] = mapped_column(Integer, default=3, nullable=False)  # 1=highest
+    deadline: Mapped[date | None] = mapped_column(Date)
+    dedicated_hours: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    data_exposure_concern: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    last_checkpoint: Mapped[str | None] = mapped_column(String(100))
+    required_demo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
 
 class System(TimestampMixin, Base):
@@ -109,29 +137,26 @@ class Priority(TimestampMixin, Base):
     system: Mapped[System] = relationship(back_populates="priorities")
 
 
-class Task(TimestampMixin, Base):
+class Task(WorkItemMixin, TimestampMixin, Base):
     __tablename__ = "tasks"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     system_id: Mapped[int] = mapped_column(
         ForeignKey("systems.id", ondelete="CASCADE"), nullable=False
     )
-    title: Mapped[str] = mapped_column(String(300), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text)
-    status: Mapped[WorkStatus] = mapped_column(
-        Enum(WorkStatus), default=WorkStatus.todo, nullable=False
-    )
-    deadline: Mapped[date | None] = mapped_column(Date)
-    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     system: Mapped[System] = relationship(back_populates="tasks")
     subtasks: Mapped[list[Subtask]] = relationship(
         back_populates="task", cascade="all, delete-orphan"
     )
+    time_logs: Mapped[list[TimeLog]] = relationship(
+        back_populates="task", cascade="all, delete-orphan"
+    )
 
 
-class Subtask(TimestampMixin, Base):
-    """Inherits its parent System's current monthly priority (computed, not stored)."""
+class Subtask(WorkItemMixin, TimestampMixin, Base):
+    """Carries the same editable attributes as a Task; also exposes its parent
+    System's current monthly priority (computed, not stored)."""
 
     __tablename__ = "subtasks"
 
@@ -139,13 +164,35 @@ class Subtask(TimestampMixin, Base):
     task_id: Mapped[int] = mapped_column(
         ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False
     )
-    title: Mapped[str] = mapped_column(String(300), nullable=False)
-    status: Mapped[WorkStatus] = mapped_column(
-        Enum(WorkStatus), default=WorkStatus.todo, nullable=False
-    )
-    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     task: Mapped[Task] = relationship(back_populates="subtasks")
+    time_logs: Mapped[list[TimeLog]] = relationship(
+        back_populates="subtask", cascade="all, delete-orphan"
+    )
+
+
+class TimeLog(TimestampMixin, Base):
+    """A recorded chunk of hours spent on a Task or Subtask.
+
+    `dedicated_hours - sum(TimeLog.hours)` is the remaining budget reported in
+    the Report layer so the user knows how many hours are left.
+    """
+
+    __tablename__ = "time_logs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    task_id: Mapped[int | None] = mapped_column(
+        ForeignKey("tasks.id", ondelete="CASCADE")
+    )
+    subtask_id: Mapped[int | None] = mapped_column(
+        ForeignKey("subtasks.id", ondelete="CASCADE")
+    )
+    hours: Mapped[float] = mapped_column(Float, nullable=False)
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+    note: Mapped[str | None] = mapped_column(Text)
+
+    task: Mapped[Task | None] = relationship(back_populates="time_logs")
+    subtask: Mapped[Subtask | None] = relationship(back_populates="time_logs")
 
 
 class FocusBlock(TimestampMixin, Base):

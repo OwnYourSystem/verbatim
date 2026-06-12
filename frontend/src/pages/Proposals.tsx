@@ -41,16 +41,48 @@ export function Proposals() {
     }
   };
 
-  const describe = (a: ProposalAction): string => {
-    if (a.type === "reorder") {
-      const title = a.task_id != null ? tasks[a.task_id]?.title ?? `task #${a.task_id}` : "task";
-      return `Move “${title}” to position ${a.position}`;
-    }
-    if (a.type === "add_pretask") {
-      return `Add a new pre-task: “${a.title}”`;
-    }
-    return JSON.stringify(a);
+  const titleOf = (id?: number) =>
+    id != null ? tasks[id]?.title ?? `task #${id}` : "task";
+
+  const attrSummary = (a: ProposalAction): string => {
+    const bits: string[] = [];
+    if (a.priority != null) bits.push(`P${a.priority}`);
+    if (a.dedicated_hours != null) bits.push(`${a.dedicated_hours}h`);
+    if (a.status) bits.push(a.status.replace("_", " "));
+    if (a.last_checkpoint) bits.push(a.last_checkpoint);
+    if (a.deadline) bits.push(`due ${a.deadline}`);
+    if (a.data_exposure_concern) bits.push("🔒 data exposure");
+    if (a.required_demo) bits.push("🎬 demo");
+    return bits.length ? ` (${bits.join(", ")})` : "";
   };
+
+  const describe = (a: ProposalAction): string => {
+    switch (a.type) {
+      case "reorder":
+        return `Move “${titleOf(a.task_id)}” to position ${a.position}`;
+      case "add_pretask":
+        return `Add a pre-task: “${a.title}”${attrSummary(a)}`;
+      case "add_task":
+        return `Add task: “${a.title}”${attrSummary(a)}`;
+      case "update_task":
+        return `Update “${a.title ?? titleOf(a.task_id)}”${attrSummary(a)}`;
+      case "add_subtask":
+        return `Break down “${titleOf(a.task_id)}” → subtask “${a.title}”${attrSummary(a)}`;
+      case "schedule":
+        return `Schedule “${titleOf(a.task_id)}” on ${a.day}`;
+      case "insight":
+        return a.message ?? "";
+      default:
+        return JSON.stringify(a);
+    }
+  };
+
+  const arrow = (a: ProposalAction) =>
+    a.type === "insight"
+      ? a.kind === "risk" || a.kind === "blocker"
+        ? "⚠"
+        : "💡"
+      : "→";
 
   return (
     <div className="space-y-6">
@@ -83,15 +115,26 @@ export function Proposals() {
 
           {p.actions.length > 0 ? (
             <ul className="mt-4 space-y-1.5 text-sm">
-              {p.actions.map((a, i) => (
-                <li
-                  key={i}
-                  className="flex gap-2.5 rounded-lg px-3 py-2 bg-slate-900/50 border border-slate-800"
-                >
-                  <span className="text-violet-400">→</span>
-                  <span>{describe(a)}</span>
-                </li>
-              ))}
+              {p.actions.map((a, i) => {
+                const isInsight = a.type === "insight";
+                return (
+                  <li
+                    key={i}
+                    className="flex gap-2.5 rounded-lg px-3 py-2 border"
+                    style={{
+                      background: isInsight ? "rgba(245,166,35,0.06)" : "rgba(8,12,24,0.5)",
+                      borderColor: isInsight
+                        ? "rgba(245,166,35,0.25)"
+                        : "rgba(120,140,220,0.12)",
+                    }}
+                  >
+                    <span className={isInsight ? "text-amber-400" : "text-violet-400"}>
+                      {arrow(a)}
+                    </span>
+                    <span className={isInsight ? "text-amber-200/90" : ""}>{describe(a)}</span>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <p className="mt-3 text-sm text-slate-500">No actionable changes proposed.</p>

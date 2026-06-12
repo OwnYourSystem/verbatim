@@ -11,8 +11,9 @@ import type {
   System,
   SystemStatus,
   Task,
+  TimeLog,
   TodayView,
-  WorkStatus,
+  WorkItemInput,
 } from "./types";
 
 const BASE = "/api";
@@ -90,27 +91,38 @@ export const api = {
   // Tasks
   listTasks: (systemId?: number) =>
     request<Task[]>(`/tasks${systemId ? `?system_id=${systemId}` : ""}`),
-  createTask: (body: {
-    system_id: number;
-    title: string;
-    deadline?: string | null;
-    status?: WorkStatus;
-  }) => request<Task>("/tasks", { method: "POST", body: JSON.stringify(body) }),
-  updateTask: (
-    id: number,
-    body: Partial<{ title: string; status: WorkStatus; deadline: string | null }>,
-  ) => request<Task>(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  createTask: (body: { system_id: number; title: string } & WorkItemInput) =>
+    request<Task>("/tasks", { method: "POST", body: JSON.stringify(body) }),
+  updateTask: (id: number, body: WorkItemInput & { system_id?: number }) =>
+    request<Task>(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   deleteTask: (id: number) => request<void>(`/tasks/${id}`, { method: "DELETE" }),
 
   // Subtasks
   listSubtasks: (taskId: number) =>
     request<Subtask[]>(`/subtasks?task_id=${taskId}`),
-  createSubtask: (body: { task_id: number; title: string }) =>
+  createSubtask: (body: { task_id: number; title: string } & WorkItemInput) =>
     request<Subtask>("/subtasks", { method: "POST", body: JSON.stringify(body) }),
-  updateSubtask: (id: number, body: Partial<{ title: string; status: WorkStatus }>) =>
+  updateSubtask: (id: number, body: WorkItemInput & { task_id?: number }) =>
     request<Subtask>(`/subtasks/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   deleteSubtask: (id: number) =>
     request<void>(`/subtasks/${id}`, { method: "DELETE" }),
+
+  // Time logs (records hours spent → Report layer shows remaining)
+  listTimeLogs: (params: { task_id?: number; subtask_id?: number }) => {
+    const qs = new URLSearchParams();
+    if (params.task_id != null) qs.set("task_id", String(params.task_id));
+    if (params.subtask_id != null) qs.set("subtask_id", String(params.subtask_id));
+    return request<TimeLog[]>(`/time-logs?${qs.toString()}`);
+  },
+  logTime: (body: {
+    task_id?: number;
+    subtask_id?: number;
+    hours: number;
+    day?: string | null;
+    note?: string | null;
+  }) => request<TimeLog>("/time-logs", { method: "POST", body: JSON.stringify(body) }),
+  deleteTimeLog: (id: number) =>
+    request<void>(`/time-logs/${id}`, { method: "DELETE" }),
 
   // Calendar
   listFocusBlocks: (start?: string, end?: string) => {
@@ -123,6 +135,7 @@ export const api = {
   createFocusBlock: (body: {
     day: string;
     system_id?: number | null;
+    task_id?: number | null;
     note?: string | null;
   }) => request<FocusBlock>("/focus-blocks", { method: "POST", body: JSON.stringify(body) }),
   deleteFocusBlock: (id: number) =>

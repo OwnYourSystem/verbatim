@@ -22,6 +22,31 @@ def current_year_month(today: date | None = None) -> tuple[int, int]:
     return today.year, today.month
 
 
+# ---------------------------------------------------------------------------
+# Hours budgeting & schedule pressure (CR-1 §4). `dedicated_hours` is the plan;
+# spent hours are summed from TimeLog rows; the difference is what's left.
+# ---------------------------------------------------------------------------
+def spent_hours_for(item: Task | Subtask) -> float:
+    return round(sum(log.hours for log in item.time_logs), 2)
+
+
+def time_left_days(deadline: date | None, today: date | None = None) -> int | None:
+    if deadline is None:
+        return None
+    today = today or date.today()
+    return (deadline - today).days
+
+
+def computed_fields(item: Task | Subtask, today: date | None = None) -> dict:
+    """The server-computed read-only fields shared by Task and Subtask reads."""
+    spent = spent_hours_for(item)
+    return {
+        "spent_hours": spent,
+        "remaining_hours": round((item.dedicated_hours or 0.0) - spent, 2),
+        "time_left_days": time_left_days(item.deadline, today),
+    }
+
+
 def get_current_priority(db: Session, system_id: int) -> int | None:
     """Return the System's priority score for the current month, if set."""
     year, month = current_year_month()

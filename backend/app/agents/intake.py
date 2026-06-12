@@ -31,24 +31,56 @@ class IntakeClient(Protocol):
     def next_step(self, history: list[dict]) -> dict: ...
 
 
+def _wi(title: str, **kw) -> dict:
+    """Build a fully-attributed work item (scrum-master defaults for every field)."""
+    base = {
+        "title": title,
+        "description": kw.get("description"),
+        "status": kw.get("status", "todo"),
+        "priority": kw.get("priority", 3),
+        "deadline": kw.get("deadline"),
+        "dedicated_hours": kw.get("dedicated_hours", 4.0),
+        "data_exposure_concern": kw.get("data_exposure_concern", False),
+        "last_checkpoint": kw.get("last_checkpoint", "Planning"),
+        "required_demo": kw.get("required_demo", False),
+    }
+    if "subtasks" in kw:
+        base["subtasks"] = kw["subtasks"]
+    return base
+
+
 def _starter_tasks(fields: dict) -> list[dict]:
-    """A small, deterministic starter task tree derived from the answers."""
+    """A deterministic starter backlog with every attribute filled in, sequenced
+    by priority the way an experienced scrum master would seed a new system."""
     return [
-        {
-            "title": "Define scope and success criteria",
-            "subtasks": [
-                {"title": "List concrete deliverables"},
-                {"title": "Write down the constraints"},
+        _wi(
+            "Define scope and success criteria",
+            priority=1,
+            dedicated_hours=6.0,
+            last_checkpoint="Planning",
+            description="Lock down what 'done' means before any build work starts.",
+            subtasks=[
+                _wi("List concrete deliverables", priority=1, dedicated_hours=2.0),
+                _wi("Write down the constraints", priority=2, dedicated_hours=2.0),
             ],
-        },
-        {
-            "title": "Plan the first deliverable",
-            "subtasks": [{"title": "Break it into steps"}],
-        },
-        {
-            "title": "Set up tracking and cadence",
-            "subtasks": [],
-        },
+        ),
+        _wi(
+            "Plan the first deliverable",
+            priority=2,
+            dedicated_hours=8.0,
+            last_checkpoint="Development",
+            description="Break the first slice of value into buildable steps.",
+            subtasks=[_wi("Break it into steps", priority=2, dedicated_hours=3.0)],
+        ),
+        _wi(
+            "Set up tracking and cadence",
+            priority=3,
+            dedicated_hours=3.0,
+            last_checkpoint="Planning",
+            required_demo=True,
+            description="Stand up the ritual cadence: standup, review, retro.",
+            subtasks=[],
+        ),
     ]
 
 
@@ -89,19 +121,29 @@ class AnthropicIntake:
             f"Q: {h.get('question', '')}\nA: {h.get('answer', '')}" for h in history
         )
         system_prompt = (
-            "You are conducting a structured intake interview to define a new "
-            "'system' (a top-level work domain) for a personal productivity tool. "
-            "Ask ONE focused question at a time. Cover: name, purpose, goals, "
-            "constraints, dependencies, delivery expectations. Do not assume or skip. "
-            "When you have enough to define the system, propose a small starter task "
-            "tree.\n\n"
+            "You are an elite Agile Scrum Master and senior software engineer with "
+            "decades of experience, conducting a structured intake interview to "
+            "define a new 'system' (a top-level work domain). Ask ONE focused "
+            "question at a time. Cover: name, purpose, goals, constraints, "
+            "dependencies, delivery expectations. Do not assume or skip. When you "
+            "have enough, propose a starter backlog where you FILL IN EVERY "
+            "ATTRIBUTE of each task and subtask using best-practice judgement.\n\n"
+            "Priority scale: 1 = highest, 5 = lowest. last_checkpoint is the "
+            "functional phase: Planning|Development|Testing|Staging|Production.\n\n"
             "Respond with ONLY JSON, one of:\n"
             '{"done": false, "question": "<next question>"}\n'
             "or\n"
             '{"done": true, "proposal": {"system": {"name": "...", "purpose": "...", '
             '"goals": "...", "constraints": "...", "dependencies": "...", '
             '"delivery_expectations": "..."}, "tasks": [{"title": "...", '
-            '"subtasks": [{"title": "..."}]}]}}'
+            '"description": "...", "status": "todo", "priority": <1-5>, '
+            '"deadline": "YYYY-MM-DD or null", "dedicated_hours": <number>, '
+            '"data_exposure_concern": <bool>, "last_checkpoint": "Planning", '
+            '"required_demo": <bool>, "subtasks": [{"title": "...", '
+            '"description": "...", "status": "todo", "priority": <1-5>, '
+            '"deadline": null, "dedicated_hours": <number>, '
+            '"data_exposure_concern": <bool>, "last_checkpoint": "Planning", '
+            '"required_demo": <bool>}]}]}}'
         )
         resp = client.messages.create(
             model=self._model,

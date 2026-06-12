@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { Report } from "../types";
+import { ChartView } from "../components/Charts";
 
 type Kind = "weekly" | "monthly" | "on-demand";
 type Semantic = "ok" | "warn" | "crit" | "idle";
@@ -284,6 +285,20 @@ export function Reports() {
           <p className="mt-1 text-base italic" style={{ color: "rgba(210,220,255,0.75)" }}>
             {report.summary}
           </p>
+          {report.charts.length > 0 && (
+            <div className="mt-6 grid md:grid-cols-2 gap-4">
+              {report.charts.map((c, i) => (
+                <div
+                  key={i}
+                  className="animate-fade-up"
+                  style={{ animationDelay: `${i * 60}ms` }}
+                >
+                  <ChartView chart={c} />
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="mt-6 grid md:grid-cols-2 gap-4">
             {report.sections.map((s, i) => (
               <div key={i} className="animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>

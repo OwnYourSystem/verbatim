@@ -63,29 +63,53 @@ class PriorityRead(_ORM, PriorityBase):
     system_id: int
 
 
-# ---- Task ----
-class TaskBase(BaseModel):
+# ---- Shared work-item attributes (Tasks and Subtasks) ----
+class WorkItemBase(BaseModel):
     title: str = Field(min_length=1, max_length=300)
     description: str | None = None
     status: WorkStatus = WorkStatus.todo
+    priority: int = Field(default=3, ge=1, le=5)  # 1 = highest, 5 = lowest
     deadline: date | None = None
+    dedicated_hours: float = Field(default=0.0, ge=0)
+    data_exposure_concern: bool = False
+    last_checkpoint: str | None = Field(default=None, max_length=100)
+    required_demo: bool = False
     position: int = 0
 
 
-class TaskCreate(TaskBase):
-    system_id: int
+class WorkItemUpdate(BaseModel):
+    """Every attribute is optional and editable."""
 
-
-class TaskUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=300)
     description: str | None = None
     status: WorkStatus | None = None
+    priority: int | None = Field(default=None, ge=1, le=5)
     deadline: date | None = None
+    dedicated_hours: float | None = Field(default=None, ge=0)
+    data_exposure_concern: bool | None = None
+    last_checkpoint: str | None = Field(default=None, max_length=100)
+    required_demo: bool | None = None
     position: int | None = None
+
+
+class _Computed(BaseModel):
+    """Server-computed read-only fields for hours and schedule pressure."""
+
+    spent_hours: float = 0.0
+    remaining_hours: float = 0.0
+    time_left_days: int | None = None  # deadline - today; negative if overdue
+
+
+# ---- Task ----
+class TaskCreate(WorkItemBase):
+    system_id: int
+
+
+class TaskUpdate(WorkItemUpdate):
     system_id: int | None = None
 
 
-class TaskRead(_ORM, TaskBase):
+class TaskRead(_ORM, WorkItemBase, _Computed):
     id: int
     system_id: int
     created_at: datetime
@@ -93,29 +117,42 @@ class TaskRead(_ORM, TaskBase):
 
 
 # ---- Subtask ----
-class SubtaskBase(BaseModel):
-    title: str = Field(min_length=1, max_length=300)
-    status: WorkStatus = WorkStatus.todo
-    position: int = 0
-
-
-class SubtaskCreate(SubtaskBase):
+class SubtaskCreate(WorkItemBase):
     task_id: int
 
 
-class SubtaskUpdate(BaseModel):
-    title: str | None = Field(default=None, min_length=1, max_length=300)
-    status: WorkStatus | None = None
-    position: int | None = None
+class SubtaskUpdate(WorkItemUpdate):
     task_id: int | None = None
 
 
-class SubtaskRead(_ORM, SubtaskBase):
+class SubtaskRead(_ORM, WorkItemBase, _Computed):
     id: int
     task_id: int
     created_at: datetime
     updated_at: datetime
-    inherited_priority: int | None = None  # filled by endpoint
+    inherited_priority: int | None = None  # System monthly priority (filled by endpoint)
+
+
+# ---- TimeLog ----
+class TimeLogBase(BaseModel):
+    hours: float = Field(gt=0)
+    day: date | None = None  # defaults to today on the server
+    note: str | None = None
+
+
+class TimeLogCreate(TimeLogBase):
+    task_id: int | None = None
+    subtask_id: int | None = None
+
+
+class TimeLogRead(_ORM):
+    id: int
+    task_id: int | None
+    subtask_id: int | None
+    hours: float
+    day: date
+    note: str | None
+    created_at: datetime
 
 
 # ---- FocusBlock ----
@@ -144,6 +181,8 @@ class FocusBlockUpdate(BaseModel):
 class FocusBlockRead(_ORM, FocusBlockBase):
     id: int
     created_at: datetime
+    task_title: str | None = None  # filled by endpoint
+    system_name: str | None = None  # filled by endpoint
 
 
 # ---- AgentProgram ----
@@ -207,21 +246,85 @@ class CheckInRead(_ORM):
     created_at: datetime
 
 
-# ---- Rebalance proposals (agent output) ----
+# ---- Rebalance proposals (the AI scrum-master's toolkit) ----
+class _WorkItemAttrs(BaseModel):
+    """Optional attributes the scrum master may set on a task/subtask."""
+
+    description: str | None = None
+    status: WorkStatus | None = None
+    priority: int | None = Field(default=None, ge=1, le=5)
+    deadline: date | None = None
+    dedicated_hours: float | None = Field(default=None, ge=0)
+    data_exposure_concern: bool | None = None
+    last_checkpoint: str | None = Field(default=None, max_length=100)
+    required_demo: bool | None = None
+
+
 class ReorderAction(BaseModel):
     type: Literal["reorder"] = "reorder"
     task_id: int
     position: int
 
 
-class AddPretaskAction(BaseModel):
+class AddPretaskAction(_WorkItemAttrs):
     type: Literal["add_pretask"] = "add_pretask"
     title: str = Field(min_length=1, max_length=300)
     # New pre-task is inserted at the front of the system's task list.
 
 
+class AddTaskAction(_WorkItemAttrs):
+    """Add a fully-specified task (the scrum master fills every attribute)."""
+
+    type: Literal["add_task"] = "add_task"
+    title: str = Field(min_length=1, max_length=300)
+
+
+class UpdateTaskAction(_WorkItemAttrs):
+    """Adjust attributes of an existing task — re-estimate, re-prioritise, etc."""
+
+    type: Literal["update_task"] = "update_task"
+    task_id: int
+    title: str | None = Field(default=None, min_length=1, max_length=300)
+
+
+class AddSubtaskAction(_WorkItemAttrs):
+    """Break a task down into a subtask with full attributes."""
+
+    type: Literal["add_subtask"] = "add_subtask"
+    task_id: int
+    title: str = Field(min_length=1, max_length=300)
+
+
+class ScheduleAction(BaseModel):
+    """Put a task on the calendar (creates a focus block)."""
+
+    type: Literal["schedule"] = "schedule"
+    task_id: int
+    day: date
+    note: str | None = None
+
+
+class InsightAction(BaseModel):
+    """A non-mutating PM insight: risk, blocker, estimate, ceremony reminder.
+
+    Applying it changes nothing in the data; it is recorded for the user to read.
+    """
+
+    type: Literal["insight"] = "insight"
+    kind: Literal["risk", "blocker", "estimate", "suggestion", "ceremony"] = "suggestion"
+    message: str = Field(min_length=1)
+
+
 # Discriminated by the "type" field when parsing agent output.
-ProposalAction = ReorderAction | AddPretaskAction
+ProposalAction = (
+    ReorderAction
+    | AddPretaskAction
+    | AddTaskAction
+    | UpdateTaskAction
+    | AddSubtaskAction
+    | ScheduleAction
+    | InsightAction
+)
 
 
 class RebalanceProposalRead(_ORM):
@@ -247,11 +350,26 @@ class IntakeStepRequest(BaseModel):
 
 class ProposedSubtask(BaseModel):
     title: str = Field(min_length=1, max_length=300)
+    description: str | None = None
+    status: WorkStatus = WorkStatus.todo
+    priority: int = Field(default=3, ge=1, le=5)
+    deadline: date | None = None
+    dedicated_hours: float = Field(default=0.0, ge=0)
+    data_exposure_concern: bool = False
+    last_checkpoint: str | None = Field(default=None, max_length=100)
+    required_demo: bool = False
 
 
 class ProposedTask(BaseModel):
     title: str = Field(min_length=1, max_length=300)
+    description: str | None = None
+    status: WorkStatus = WorkStatus.todo
+    priority: int = Field(default=3, ge=1, le=5)
     deadline: date | None = None
+    dedicated_hours: float = Field(default=0.0, ge=0)
+    data_exposure_concern: bool = False
+    last_checkpoint: str | None = Field(default=None, max_length=100)
+    required_demo: bool = False
     subtasks: list[ProposedSubtask] = Field(default_factory=list)
 
 
@@ -287,12 +405,28 @@ class ReportSection(BaseModel):
     items: list[str]
 
 
+class ChartPoint(BaseModel):
+    label: str
+    value: float
+    # Optional second value for waterfall/grouped charts (e.g. spent vs budget).
+    secondary: float | None = None
+    color: str | None = None
+
+
+class Chart(BaseModel):
+    type: Literal["bar", "pie", "waterfall", "line"]
+    title: str
+    unit: str | None = None
+    points: list[ChartPoint] = Field(default_factory=list)
+
+
 class Report(BaseModel):
     type: str
     title: str
     generated_at: str
     summary: str
     sections: list[ReportSection]
+    charts: list[Chart] = Field(default_factory=list)
 
 
 # ---- Dashboard ----

@@ -70,6 +70,19 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
 
 ## Action log
 
+### 2026-06-12 — Change Request 1 (CR-1): rich task attributes, time tracking, scrum-master AI, charts
+
+Implemented the first testing-phase change request end-to-end:
+
+- **Data model (`models.py`):** new `WorkItemMixin` shared by Task & Subtask — `description`, `status`, `priority` (1=highest…5=lowest), `deadline`, `dedicated_hours`, `data_exposure_concern`, `last_checkpoint` (Planning/Development/Testing/Staging/Production), `required_demo`, `position`. New `TimeLog` table (hours spent against a task/subtask). Migration `0002_task_attributes_and_time_logs.py`.
+- **Hours budgeting (§4):** `services.computed_fields()` derives `spent_hours` (sum of TimeLogs), `remaining_hours` (dedicated − spent), `time_left_days` (deadline − today). On every Task/Subtask read and in reports.
+- **API:** Task/Subtask reads carry computed fields; all attributes editable via PATCH. New time-log endpoints (`GET/POST/DELETE /time-logs`). Calendar reads include `task_title`/`system_name`.
+- **AI scrum master (§5, §7):** `StubLLM` rewritten as a deterministic agile scrum master (re-sequence by priority+deadline, size unestimated work, escalate near deadlines, flag overdue/over-budget/data-exposure/demo risks, schedule urgent work, prep pre-task). Expanded action set: `update_task`, `add_task`, `add_subtask`, `schedule` (→ calendar), `insight` (PM notes) plus `reorder`/`add_pretask`. `AnthropicLLM`/`AnthropicIntake` prompts upgraded to a veteran-scrum-master persona that fills **all** attributes. Intake commit persists every attribute and seeds the calendar for dated tasks (§9).
+- **Reports (§6):** structured `charts` (bar / pie / waterfall) on weekly/monthly/on-demand — completion %, status mix, hours budget-vs-spent-vs-remaining. Pure-SVG chart components (`components/Charts.tsx`), no new npm deps (keeps `npm ci` lockfile-safe).
+- **Frontend:** `components/WorkItemEditor.tsx` — full editable attribute form + inline time logging + hours bar + priority badge, reused for Tasks and Subtasks. `Systems.tsx` rebuilt around it; `Calendar.tsx` shows/schedules tasks; `Reports.tsx` renders charts; `Proposals.tsx` renders new actions + insights; `Intake.tsx` shows AI-filled attributes.
+- **Priority hierarchy (§10):** task/subtask `priority` is 1=highest … 5=lowest throughout (colour-coded badges; AI escalates to P1 near deadlines).
+- **Tests:** added `tests/test_attributes.py`. **Verified: ruff clean, 30 backend tests pass; frontend tsc clean + vite build OK.**
+
 ### 2026-06-09
 
 - Created GitHub repo `OwnYourSystem/MindAnchor` (private) via `gh` CLI; cloned locally.

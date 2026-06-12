@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import type { Subtask, System, Task } from "../types";
+import type { Subtask, System, Task, WorkItemInput } from "../types";
 import { Card, Empty, PageHeader, StatusBadge } from "../components/ui";
+import { HoursBar, PriorityBadge, WorkItemEditor } from "../components/WorkItemEditor";
 
 export function Systems() {
   const [systems, setSystems] = useState<System[]>([]);
@@ -24,7 +25,6 @@ export function Systems() {
   };
 
   const now = new Date();
-
   const setPriority = async (s: System, score: number) => {
     await api.setPriority(s.id, now.getFullYear(), now.getMonth() + 1, score);
     load();
@@ -34,7 +34,7 @@ export function Systems() {
     setNotice(null);
     try {
       await api.requestRebalance(s.id);
-      setNotice(`Agent proposed a rebalance for “${s.name}”. Review it on Proposals.`);
+      setNotice(`The scrum master reviewed “${s.name}”. Review the plan on Proposals.`);
     } catch (e) {
       setError(String(e));
     }
@@ -44,7 +44,7 @@ export function Systems() {
     <div className="space-y-6">
       <PageHeader
         title="Systems"
-        subtitle="Your top-level work domains, each with its own priority and agent."
+        subtitle="Your top-level work domains. Every task & subtask attribute is editable."
       />
       {error && <p className="text-amber-400 text-sm">{error}</p>}
       {notice && (
@@ -79,23 +79,21 @@ export function Systems() {
                 <span className="text-slate-500 mr-1.5">{openId === s.id ? "▾" : "▸"}</span>
                 {s.name}
               </button>
-              <label className="text-xs text-slate-400">priority</label>
+              <label className="text-xs text-slate-400">monthly priority</label>
               <input
                 type="number"
                 min={1}
                 max={100}
                 defaultValue={s.current_priority ?? ""}
-                onBlur={(e) =>
-                  e.target.value && setPriority(s, Number(e.target.value))
-                }
+                onBlur={(e) => e.target.value && setPriority(s, Number(e.target.value))}
                 className="input-base w-16 !py-1"
               />
               <button
                 onClick={() => rebalance(s)}
                 className="btn-accent !px-3 !py-1.5 !text-xs"
-                title="Ask this system's agent to propose a rebalance"
+                title="Ask the AI scrum master to review and plan this system"
               >
-                Rebalance
+                Scrum review
               </button>
               <button
                 onClick={async () => {
@@ -120,6 +118,8 @@ function TaskManager({ systemId }: { systemId: number }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [title, setTitle] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [hours, setHours] = useState("");
+  const [priority, setPriority] = useState("3");
 
   const load = () => api.listTasks(systemId).then(setTasks);
   useEffect(() => {
@@ -132,21 +132,46 @@ function TaskManager({ systemId }: { systemId: number }) {
       system_id: systemId,
       title: title.trim(),
       deadline: deadline || null,
+      dedicated_hours: hours ? Number(hours) : 0,
+      priority: Number(priority),
     });
     setTitle("");
     setDeadline("");
+    setHours("");
+    setPriority("3");
     load();
   };
 
   return (
     <div className="mt-4 pl-4 border-l-2 border-emerald-500/20 space-y-3">
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <input
-          className="input-base flex-1 !py-1.5"
+          className="input-base flex-1 min-w-[160px] !py-1.5"
           placeholder="New task"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && addTask()}
+        />
+        <select
+          className="input-base !py-1.5"
+          value={priority}
+          onChange={(e) => setPriority(e.target.value)}
+          title="Priority (1 = highest)"
+        >
+          {[1, 2, 3, 4, 5].map((p) => (
+            <option key={p} value={p}>
+              P{p}
+            </option>
+          ))}
+        </select>
+        <input
+          type="number"
+          min={0}
+          step={0.5}
+          placeholder="hrs"
+          className="input-base w-20 !py-1.5"
+          value={hours}
+          onChange={(e) => setHours(e.target.value)}
         />
         <input
           type="date"
@@ -161,36 +186,45 @@ function TaskManager({ systemId }: { systemId: number }) {
       {tasks.map((t) => (
         <TaskRow key={t.id} task={t} onChange={load} />
       ))}
+      {tasks.length === 0 && (
+        <p className="text-xs text-slate-500">No tasks yet — add one above.</p>
+      )}
     </div>
   );
 }
 
 function TaskRow({ task, onChange }: { task: Task; onChange: () => void }) {
   const [open, setOpen] = useState(false);
-  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
-  const [subTitle, setSubTitle] = useState("");
 
-  const loadSubs = () => api.listSubtasks(task.id).then(setSubtasks);
-  useEffect(() => {
-    if (open) loadSubs();
-  }, [open, task.id]);
-
-  const cycle = async () => {
-    const next = task.status === "done" ? "todo" : "done";
-    await api.updateTask(task.id, { status: next });
+  const save = async (patch: WorkItemInput) => {
+    await api.updateTask(task.id, patch);
+    onChange();
+  };
+  const logTime = async (h: number, note: string | null) => {
+    await api.logTime({ task_id: task.id, hours: h, note });
     onChange();
   };
 
   return (
-    <div>
-      <div className="flex items-center gap-2 text-sm rounded-lg px-2 py-1.5 transition-colors hover:bg-slate-900/60">
+    <div className="rounded-xl border border-slate-800 bg-slate-900/30">
+      <div className="flex items-center gap-2 text-sm px-2.5 py-2">
         <button onClick={() => setOpen(!open)} className="text-slate-500">
           {open ? "▾" : "▸"}
         </button>
-        <button onClick={cycle} className="flex-1 text-left">
+        <PriorityBadge priority={task.priority} />
+        <button onClick={() => setOpen(!open)} className="flex-1 text-left font-medium">
           {task.title}
+          {task.data_exposure_concern && <span title="Data exposure" className="ml-1.5">🔒</span>}
+          {task.required_demo && <span title="Demo required" className="ml-1">🎬</span>}
         </button>
-        {task.deadline && <span className="text-xs text-slate-400">{task.deadline}</span>}
+        {task.last_checkpoint && (
+          <span className="text-[10px] text-slate-400 px-1.5 py-0.5 rounded bg-slate-800">
+            {task.last_checkpoint}
+          </span>
+        )}
+        <div className="hidden sm:block w-32">
+          <HoursBar spent={task.spent_hours} dedicated={task.dedicated_hours} />
+        </div>
         <StatusBadge status={task.status} />
         <button
           onClick={async () => {
@@ -203,39 +237,94 @@ function TaskRow({ task, onChange }: { task: Task; onChange: () => void }) {
         </button>
       </div>
       {open && (
-        <div className="mt-2 pl-5 border-l border-slate-800 space-y-1">
-          {subtasks.map((st) => (
-            <div key={st.id} className="flex items-center gap-2 text-sm">
-              <span className="flex-1">{st.title}</span>
-              <span className="text-xs text-slate-500">
-                inh. priority {st.inherited_priority ?? "—"}
-              </span>
-              <button
-                onClick={async () => {
-                  await api.deleteSubtask(st.id);
-                  loadSubs();
-                }}
-                className="btn-ghost-danger"
-              >
-                ✕
-              </button>
-            </div>
-          ))}
-          <div className="flex gap-2 pt-1">
-            <input
-              className="input-base flex-1 !py-1"
-              placeholder="New subtask"
-              value={subTitle}
-              onChange={(e) => setSubTitle(e.target.value)}
-              onKeyDown={async (e) => {
-                if (e.key === "Enter" && subTitle.trim()) {
-                  await api.createSubtask({ task_id: task.id, title: subTitle.trim() });
-                  setSubTitle("");
-                  loadSubs();
-                }
-              }}
-            />
-          </div>
+        <div className="px-2.5 pb-3 space-y-3">
+          <WorkItemEditor item={task} onSave={save} onLogTime={logTime} />
+          <SubtaskManager taskId={task.id} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SubtaskManager({ taskId }: { taskId: number }) {
+  const [subs, setSubs] = useState<Subtask[]>([]);
+  const [title, setTitle] = useState("");
+
+  const load = () => api.listSubtasks(taskId).then(setSubs);
+  useEffect(() => {
+    load();
+  }, [taskId]);
+
+  const add = async () => {
+    if (!title.trim()) return;
+    await api.createSubtask({ task_id: taskId, title: title.trim() });
+    setTitle("");
+    load();
+  };
+
+  return (
+    <div className="pl-3 border-l border-slate-800 space-y-2">
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        Subtasks
+      </div>
+      {subs.map((st) => (
+        <SubtaskRow key={st.id} sub={st} onChange={load} />
+      ))}
+      <div className="flex gap-2 pt-1">
+        <input
+          className="input-base flex-1 !py-1"
+          placeholder="New subtask"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && add()}
+        />
+        <button onClick={add} className="btn-secondary !px-3 !py-1">
+          Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SubtaskRow({ sub, onChange }: { sub: Subtask; onChange: () => void }) {
+  const [open, setOpen] = useState(false);
+
+  const save = async (patch: WorkItemInput) => {
+    await api.updateSubtask(sub.id, patch);
+    onChange();
+  };
+  const logTime = async (h: number, note: string | null) => {
+    await api.logTime({ subtask_id: sub.id, hours: h, note });
+    onChange();
+  };
+
+  return (
+    <div className="rounded-lg border border-slate-800/70">
+      <div className="flex items-center gap-2 text-sm px-2 py-1.5">
+        <button onClick={() => setOpen(!open)} className="text-slate-500">
+          {open ? "▾" : "▸"}
+        </button>
+        <PriorityBadge priority={sub.priority} />
+        <button onClick={() => setOpen(!open)} className="flex-1 text-left">
+          {sub.title}
+        </button>
+        <span className="text-[10px] text-slate-500">
+          inh. {sub.inherited_priority ?? "—"}
+        </span>
+        <StatusBadge status={sub.status} />
+        <button
+          onClick={async () => {
+            await api.deleteSubtask(sub.id);
+            onChange();
+          }}
+          className="btn-ghost-danger"
+        >
+          ✕
+        </button>
+      </div>
+      {open && (
+        <div className="px-2 pb-2">
+          <WorkItemEditor item={sub} onSave={save} onLogTime={logTime} />
         </div>
       )}
     </div>

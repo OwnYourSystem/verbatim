@@ -1,0 +1,264 @@
+import { useEffect, useState } from "react";
+import { CHECKPOINTS, type WorkItemFields, type WorkItemInput, type WorkStatus } from "../types";
+
+const STATUSES: { value: WorkStatus; label: string }[] = [
+  { value: "todo", label: "To Do" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "blocked", label: "Blocked" },
+  { value: "done", label: "Done" },
+];
+
+/** Priority 1 (highest) → 5 (lowest), with colour by urgency. */
+export function PriorityBadge({ priority }: { priority: number }) {
+  const color =
+    priority <= 1
+      ? "var(--color-signal-crit)"
+      : priority === 2
+        ? "var(--color-signal-warn)"
+        : priority >= 4
+          ? "var(--color-signal-idle)"
+          : "var(--color-signal-ok)";
+  return (
+    <span
+      className="text-[10px] font-bold px-1.5 py-0.5 rounded-md metric"
+      style={{ color, border: `1px solid ${color}`, background: "rgba(8,12,24,0.6)" }}
+      title="Priority (1 = highest)"
+    >
+      P{priority}
+    </span>
+  );
+}
+
+/** Horizontal budget bar: spent vs dedicated hours. */
+export function HoursBar({ spent, dedicated }: { spent: number; dedicated: number }) {
+  const pct = dedicated > 0 ? Math.min(100, (spent / dedicated) * 100) : 0;
+  const over = spent > dedicated;
+  return (
+    <div className="flex items-center gap-2 min-w-[120px]">
+      <div className="flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{
+            width: `${pct}%`,
+            background: over ? "var(--color-signal-crit)" : "var(--color-signal-ok)",
+          }}
+        />
+      </div>
+      <span className="metric text-[10px] text-slate-400 whitespace-nowrap">
+        {spent}/{dedicated}h
+      </span>
+    </div>
+  );
+}
+
+function TimeLeft({ days }: { days: number | null }) {
+  if (days == null) return <span className="text-[10px] text-slate-500">no due date</span>;
+  const color =
+    days < 0
+      ? "var(--color-signal-crit)"
+      : days <= 2
+        ? "var(--color-signal-warn)"
+        : "var(--color-signal-ok)";
+  return (
+    <span className="metric text-[10px]" style={{ color }}>
+      {days < 0 ? `${Math.abs(days)}d overdue` : `${days}d left`}
+    </span>
+  );
+}
+
+const field = "text-[11px] text-slate-400 mb-1 block";
+const inp = "input-base w-full !py-1.5 text-sm";
+
+/** Full editable attribute form for a Task or Subtask. Saves on change. */
+export function WorkItemEditor({
+  item,
+  onSave,
+  onLogTime,
+}: {
+  item: WorkItemFields;
+  onSave: (patch: WorkItemInput) => void | Promise<void>;
+  onLogTime?: (hours: number, note: string | null) => void | Promise<void>;
+}) {
+  const [draft, setDraft] = useState<WorkItemFields>(item);
+  const [logHours, setLogHours] = useState("");
+  const [logNote, setLogNote] = useState("");
+
+  useEffect(() => setDraft(item), [item]);
+
+  const save = (patch: WorkItemInput) => {
+    setDraft((d) => ({ ...d, ...patch }) as WorkItemFields);
+    onSave(patch);
+  };
+
+  return (
+    <div className="space-y-3 rounded-xl p-3 bg-slate-900/40 border border-slate-800">
+      {/* Title + description */}
+      <div>
+        <label className={field}>Title</label>
+        <input
+          className={inp}
+          value={draft.title}
+          onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+          onBlur={(e) => e.target.value.trim() && save({ title: e.target.value.trim() })}
+        />
+      </div>
+      <div>
+        <label className={field}>Description</label>
+        <textarea
+          className={`${inp} min-h-[56px] resize-y`}
+          value={draft.description ?? ""}
+          onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+          onBlur={(e) => save({ description: e.target.value || null })}
+          placeholder="What this entails…"
+        />
+      </div>
+
+      {/* Status / priority / checkpoint */}
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <label className={field}>Status</label>
+          <select
+            className={inp}
+            value={draft.status}
+            onChange={(e) => save({ status: e.target.value as WorkStatus })}
+          >
+            {STATUSES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={field}>Priority (1=top)</label>
+          <select
+            className={inp}
+            value={draft.priority}
+            onChange={(e) => save({ priority: Number(e.target.value) })}
+          >
+            {[1, 2, 3, 4, 5].map((p) => (
+              <option key={p} value={p}>
+                P{p}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={field}>Last checkpoint</label>
+          <select
+            className={inp}
+            value={draft.last_checkpoint ?? ""}
+            onChange={(e) => save({ last_checkpoint: e.target.value || null })}
+          >
+            <option value="">—</option>
+            {CHECKPOINTS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Deadline / dedicated hours */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className={field}>
+            Deadline <TimeLeft days={draft.time_left_days} />
+          </label>
+          <input
+            type="date"
+            className={inp}
+            value={draft.deadline ?? ""}
+            onChange={(e) => save({ deadline: e.target.value || null })}
+          />
+        </div>
+        <div>
+          <label className={field}>Dedicated hours</label>
+          <input
+            type="number"
+            min={0}
+            step={0.5}
+            className={inp}
+            value={draft.dedicated_hours}
+            onChange={(e) => setDraft({ ...draft, dedicated_hours: Number(e.target.value) })}
+            onBlur={(e) => save({ dedicated_hours: Number(e.target.value) })}
+          />
+        </div>
+      </div>
+
+      {/* Toggles */}
+      <div className="flex flex-wrap gap-4">
+        <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={draft.data_exposure_concern}
+            onChange={(e) => save({ data_exposure_concern: e.target.checked })}
+            className="accent-rose-500"
+          />
+          🔒 Data exposure concern
+        </label>
+        <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={draft.required_demo}
+            onChange={(e) => save({ required_demo: e.target.checked })}
+            className="accent-emerald-500"
+          />
+          🎬 Required demo
+        </label>
+      </div>
+
+      {/* Hours budget + time logging */}
+      <div className="rounded-lg p-2.5 bg-slate-950/40 border border-slate-800 space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[11px] text-slate-400">Hours budget</span>
+          <HoursBar spent={draft.spent_hours} dedicated={draft.dedicated_hours} />
+          <span
+            className="metric text-[11px]"
+            style={{
+              color:
+                draft.remaining_hours < 0
+                  ? "var(--color-signal-crit)"
+                  : "var(--color-signal-ok)",
+            }}
+          >
+            {draft.remaining_hours}h left
+          </span>
+        </div>
+        {onLogTime && (
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min={0}
+              step={0.25}
+              placeholder="hrs"
+              className={`${inp} !w-20`}
+              value={logHours}
+              onChange={(e) => setLogHours(e.target.value)}
+            />
+            <input
+              className={`${inp} flex-1`}
+              placeholder="What did you work on? (optional)"
+              value={logNote}
+              onChange={(e) => setLogNote(e.target.value)}
+            />
+            <button
+              className="btn-secondary !px-3 !py-1.5"
+              onClick={async () => {
+                const h = Number(logHours);
+                if (h > 0) {
+                  await onLogTime(h, logNote || null);
+                  setLogHours("");
+                  setLogNote("");
+                }
+              }}
+            >
+              Log time
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

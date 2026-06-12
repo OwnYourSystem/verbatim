@@ -25,43 +25,134 @@ class LLMClient(Protocol):
     def propose(self, context: dict) -> dict: ...
 
 
+# A rough default estimate (hours) for a task the scrum master has to size.
+DEFAULT_TASK_ESTIMATE_HOURS = 8.0
+
+
 class StubLLM:
-    """Deterministic planner: order open tasks by deadline (earliest first),
-    and suggest a prep pre-task for anything due very soon. No AI, no network."""
+    """A deterministic, offline 'scrum master' planner. No AI, no network.
+
+    Applies common agile best practices to the system's open work:
+    - Orders tasks by priority (1 = highest) then by nearest deadline.
+    - Sizes any unestimated task with a default estimate.
+    - Assigns a sensible priority to anything left unprioritised, escalating
+      items whose deadline is near.
+    - Flags risks: overdue work, data-exposure concerns, hour budgets blown,
+      and demos with no prep.
+    - Schedules near-deadline tasks onto the calendar.
+    - Suggests a prep pre-task ahead of the closest deadline.
+    """
 
     def propose(self, context: dict) -> dict:
         tasks = context.get("open_tasks", [])
         today = date.today()
+        actions: list[dict] = []
+        insights: list[str] = []
+
+        def days_to(d: str | None) -> int | None:
+            return (date.fromisoformat(d) - today).days if d else None
 
         def sort_key(t: dict):
+            pr = t.get("priority") or 3
             d = t.get("deadline")
-            return (0, d) if d else (1, "9999-12-31")
+            return (pr, d or "9999-12-31")
 
         ordered = sorted(tasks, key=sort_key)
-        actions: list[dict] = [
-            {"type": "reorder", "task_id": t["id"], "position": i}
-            for i, t in enumerate(ordered)
-        ]
 
-        suggested = None
+        # 1. Re-sequence the backlog by priority then deadline.
+        for i, t in enumerate(ordered):
+            if t.get("position") != i:
+                actions.append({"type": "reorder", "task_id": t["id"], "position": i})
+
+        # 2. Estimate, prioritise and risk-check each task.
         for t in ordered:
-            d = t.get("deadline")
-            if d and (date.fromisoformat(d) - today).days <= PRETASK_HORIZON_DAYS:
-                suggested = t
-                break
-        if suggested is not None:
+            dleft = days_to(t.get("deadline"))
+            update: dict = {"type": "update_task", "task_id": t["id"]}
+            touched = False
+
+            if not t.get("dedicated_hours"):
+                update["dedicated_hours"] = DEFAULT_TASK_ESTIMATE_HOURS
+                touched = True
+                insights.append(
+                    f"Estimated '{t['title']}' at {DEFAULT_TASK_ESTIMATE_HOURS:g}h "
+                    "(was unestimated)."
+                )
+
+            # Escalate priority for imminent deadlines.
+            if dleft is not None and dleft <= 2 and (t.get("priority") or 3) > 1:
+                update["priority"] = 1
+                touched = True
+                insights.append(
+                    f"Raised '{t['title']}' to priority 1 — due in {dleft} day(s)."
+                )
+
+            if touched:
+                actions.append(update)
+
+            # Risk flags (informational insights).
+            if dleft is not None and dleft < 0:
+                insights.append(
+                    f"⚠ OVERDUE: '{t['title']}' was due {abs(dleft)} day(s) ago."
+                )
+            if t.get("remaining_hours") is not None and t["remaining_hours"] < 0:
+                insights.append(
+                    f"⚠ Over budget: '{t['title']}' is "
+                    f"{abs(t['remaining_hours']):g}h past its estimate."
+                )
+            if t.get("data_exposure_concern"):
+                insights.append(
+                    f"🔒 '{t['title']}' is flagged for data-exposure — add a review gate."
+                )
+            if t.get("required_demo") and not t.get("subtasks"):
+                insights.append(
+                    f"🎬 '{t['title']}' needs a demo but has no breakdown — "
+                    "suggest a 'Prepare demo' subtask."
+                )
+                actions.append(
+                    {
+                        "type": "add_subtask",
+                        "task_id": t["id"],
+                        "title": "Prepare demo",
+                        "dedicated_hours": 2.0,
+                        "last_checkpoint": "Testing",
+                    }
+                )
+
+        # 3. Schedule + prep the closest deadline.
+        near = next(
+            (
+                t
+                for t in ordered
+                if (dl := days_to(t.get("deadline"))) is not None
+                and dl <= PRETASK_HORIZON_DAYS
+            ),
+            None,
+        )
+        if near is not None:
             actions.append(
-                {"type": "add_pretask", "title": f"Prep for: {suggested['title']}"}
+                {
+                    "type": "schedule",
+                    "task_id": near["id"],
+                    "day": today.isoformat(),
+                    "note": f"Focus block for '{near['title']}'",
+                }
             )
+            actions.append(
+                {
+                    "type": "add_pretask",
+                    "title": f"Prep for: {near['title']}",
+                    "priority": 1,
+                    "dedicated_hours": 1.0,
+                }
+            )
+
+        for msg in insights:
+            actions.append({"type": "insight", "kind": "suggestion", "message": msg})
 
         summary = (
-            f"Ordered {len(ordered)} open task(s) by deadline (earliest first)."
-            + (
-                f" Suggested a prep pre-task ahead of the near-term deadline "
-                f"'{suggested['title']}'."
-                if suggested
-                else ""
-            )
+            f"Scrum-master review of {len(ordered)} open task(s): re-sequenced by "
+            f"priority and deadline, sized unestimated work, and raised "
+            f"{len(insights)} insight(s)."
         )
         return {"summary": summary, "actions": actions}
 
@@ -93,19 +184,37 @@ class AnthropicLLM:
 
 def _build_system_prompt(context: dict) -> str:
     program = context.get("program") or (
-        "You are a specialist agent that owns a single system. Keep its task list "
-        "ordered so the most urgent, highest-priority work surfaces first."
+        "You are an elite Agile Scrum Master and senior software engineer with "
+        "decades of delivery experience, owning a single system. Apply agile best "
+        "practices: keep the backlog sequenced by value and risk, size every item, "
+        "surface blockers and dependencies early, protect the team from overload, "
+        "and make the plan demo-ready."
     )
     return (
         f"{program}\n\n"
-        "You may only PROPOSE changes; the user approves them. Respond with ONLY a "
-        "JSON object of the form:\n"
-        '{"summary": "<one paragraph>", "actions": [\n'
+        "Priority scale: 1 = highest, 5 = lowest. You may only PROPOSE changes; the "
+        "user approves them. Use task_ids from the provided context — never invent "
+        "them. Respect immutable deadlines. Respond with ONLY a JSON object:\n"
+        '{"summary": "<one short paragraph of PM insight>", "actions": [\n'
         '  {"type": "reorder", "task_id": <int>, "position": <int>},\n'
-        '  {"type": "add_pretask", "title": "<string>"}\n'
+        '  {"type": "update_task", "task_id": <int>, "priority": <1-5>, '
+        '"dedicated_hours": <number>, "status": "todo|in_progress|blocked|done", '
+        '"last_checkpoint": "Planning|Development|Testing|Staging|Production", '
+        '"deadline": "YYYY-MM-DD", "data_exposure_concern": <bool>, '
+        '"required_demo": <bool>, "description": "<string>"},\n'
+        '  {"type": "add_task", "title": "<string>", "priority": <1-5>, '
+        '"dedicated_hours": <number>, "deadline": "YYYY-MM-DD"},\n'
+        '  {"type": "add_pretask", "title": "<string>", "priority": <1-5>},\n'
+        '  {"type": "add_subtask", "task_id": <int>, "title": "<string>", '
+        '"dedicated_hours": <number>},\n'
+        '  {"type": "schedule", "task_id": <int>, "day": "YYYY-MM-DD", '
+        '"note": "<string>"},\n'
+        '  {"type": "insight", "kind": "risk|blocker|estimate|suggestion|ceremony", '
+        '"message": "<string>"}\n'
         "]}\n"
-        "Use task_ids from the provided context. Do not invent task_ids. "
-        "Respect the system's current priority and the immutable deadlines."
+        "Estimate any unestimated work, escalate priority for near deadlines, flag "
+        "overdue/over-budget/data-exposure risks, ensure demoable items have a "
+        "breakdown, and schedule the most urgent task."
     )
 
 
