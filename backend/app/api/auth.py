@@ -1,30 +1,49 @@
-"""Auth router — login endpoint only.  /health and / are public; everything else is guarded."""
+"""Auth router — login endpoint only."""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from app.auth import TokenResponse, create_access_token, verify_password
 from app.core.config import get_settings
+from app.db import get_db
+from app.models import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 class LoginRequest(BaseModel):
+    username: str = "owner"
     password: str
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(body: LoginRequest) -> TokenResponse:
-    """Exchange the owner password for a JWT.
+def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
+    """Exchange username + password for a JWT.
 
-    PASSWORD_HASH env var must be a bcrypt hash — never store the plaintext.
+    Checks the users table first; falls back to PASSWORD_HASH env var for
+    the 'owner' account (backward compatibility with single-user deployments).
     """
     settings = get_settings()
-    password_hash = settings.password_hash
-    if not password_hash or not verify_password(body.password, password_hash):
+    authenticated = False
+
+    # Check DB users table first
+    user: User | None = db.query(User).filter(
+        User.username == body.username,
+        User.is_active == True,  # noqa: E712
+    ).first()
+
+    if user:
+        authenticated = verify_password(body.password, user.password_hash)
+    elif body.username == "owner" and settings.password_hash:
+        # Legacy fallback: owner account stored as env var
+        authenticated = verify_password(body.password, settings.password_hash)
+
+    if not authenticated:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect password",
+            detail="Incorrect username or password",
         )
-    return TokenResponse(access_token=create_access_token())
+
+    return TokenResponse(access_token=create_access_token(body.username))

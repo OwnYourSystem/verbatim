@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CHECKPOINTS, type WorkItemFields, type WorkItemInput, type WorkStatus } from "../types";
 
 const STATUSES: { value: WorkStatus; label: string }[] = [
@@ -69,7 +69,7 @@ function TimeLeft({ days }: { days: number | null }) {
 const field = "text-[11px] text-slate-400 mb-1 block";
 const inp = "input-base w-full !py-1.5 text-sm";
 
-/** Full editable attribute form for a Task or Subtask. Saves on change. */
+/** Full editable attribute form for a Task or Subtask. Saves on explicit Save button click. */
 export function WorkItemEditor({
   item,
   onSave,
@@ -82,12 +82,31 @@ export function WorkItemEditor({
   const [draft, setDraft] = useState<WorkItemFields>(item);
   const [logHours, setLogHours] = useState("");
   const [logNote, setLogNote] = useState("");
+  const [saved, setSaved] = useState(false);
+  const fadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => setDraft(item), [item]);
 
-  const save = (patch: WorkItemInput) => {
-    setDraft((d) => ({ ...d, ...patch }) as WorkItemFields);
-    onSave(patch);
+  const handleSave = async () => {
+    const patch: WorkItemInput = {
+      title: draft.title,
+      description: draft.description,
+      status: draft.status,
+      priority: draft.priority,
+      deadline: draft.deadline,
+      dedicated_hours: draft.dedicated_hours,
+      data_exposure_concern: draft.data_exposure_concern,
+      last_checkpoint: draft.last_checkpoint,
+      required_demo: draft.required_demo,
+    };
+    await onSave(patch);
+    setSaved(true);
+    if (fadeTimer.current) clearTimeout(fadeTimer.current);
+    fadeTimer.current = setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleClear = () => {
+    setDraft(item);
   };
 
   return (
@@ -99,7 +118,6 @@ export function WorkItemEditor({
           className={inp}
           value={draft.title}
           onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-          onBlur={(e) => e.target.value.trim() && save({ title: e.target.value.trim() })}
         />
       </div>
       <div>
@@ -107,8 +125,7 @@ export function WorkItemEditor({
         <textarea
           className={`${inp} min-h-[56px] resize-y`}
           value={draft.description ?? ""}
-          onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-          onBlur={(e) => save({ description: e.target.value || null })}
+          onChange={(e) => setDraft({ ...draft, description: e.target.value || null })}
           placeholder="What this entails…"
         />
       </div>
@@ -120,7 +137,7 @@ export function WorkItemEditor({
           <select
             className={inp}
             value={draft.status}
-            onChange={(e) => save({ status: e.target.value as WorkStatus })}
+            onChange={(e) => setDraft({ ...draft, status: e.target.value as WorkStatus })}
           >
             {STATUSES.map((s) => (
               <option key={s.value} value={s.value}>
@@ -134,7 +151,7 @@ export function WorkItemEditor({
           <select
             className={inp}
             value={draft.priority}
-            onChange={(e) => save({ priority: Number(e.target.value) })}
+            onChange={(e) => setDraft({ ...draft, priority: Number(e.target.value) })}
           >
             {[1, 2, 3, 4, 5].map((p) => (
               <option key={p} value={p}>
@@ -148,7 +165,7 @@ export function WorkItemEditor({
           <select
             className={inp}
             value={draft.last_checkpoint ?? ""}
-            onChange={(e) => save({ last_checkpoint: e.target.value || null })}
+            onChange={(e) => setDraft({ ...draft, last_checkpoint: e.target.value || null })}
           >
             <option value="">—</option>
             {CHECKPOINTS.map((c) => (
@@ -170,7 +187,7 @@ export function WorkItemEditor({
             type="date"
             className={inp}
             value={draft.deadline ?? ""}
-            onChange={(e) => save({ deadline: e.target.value || null })}
+            onChange={(e) => setDraft({ ...draft, deadline: e.target.value || null })}
           />
         </div>
         <div>
@@ -182,7 +199,6 @@ export function WorkItemEditor({
             className={inp}
             value={draft.dedicated_hours}
             onChange={(e) => setDraft({ ...draft, dedicated_hours: Number(e.target.value) })}
-            onBlur={(e) => save({ dedicated_hours: Number(e.target.value) })}
           />
         </div>
       </div>
@@ -193,7 +209,7 @@ export function WorkItemEditor({
           <input
             type="checkbox"
             checked={draft.data_exposure_concern}
-            onChange={(e) => save({ data_exposure_concern: e.target.checked })}
+            onChange={(e) => setDraft({ ...draft, data_exposure_concern: e.target.checked })}
             className="accent-rose-500"
           />
           🔒 Data exposure concern
@@ -202,7 +218,7 @@ export function WorkItemEditor({
           <input
             type="checkbox"
             checked={draft.required_demo}
-            onChange={(e) => save({ required_demo: e.target.checked })}
+            onChange={(e) => setDraft({ ...draft, required_demo: e.target.checked })}
             className="accent-emerald-500"
           />
           🎬 Required demo
@@ -257,6 +273,24 @@ export function WorkItemEditor({
               Log time
             </button>
           </div>
+        )}
+      </div>
+
+      {/* Save / Clear */}
+      <div className="flex gap-2 items-center">
+        <button className="btn-primary !px-4 !py-1.5" onClick={handleSave}>
+          Save
+        </button>
+        <button className="btn-secondary !px-4 !py-1.5" onClick={handleClear}>
+          Clear
+        </button>
+        {saved && (
+          <span
+            className="text-[11px] transition-opacity"
+            style={{ color: "var(--color-signal-ok)" }}
+          >
+            Saved ✓
+          </span>
         )}
       </div>
     </div>

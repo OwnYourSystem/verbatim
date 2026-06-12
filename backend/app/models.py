@@ -255,6 +255,16 @@ class CheckIn(TimestampMixin, Base):
     completed_task_ids: Mapped[list[int]] = mapped_column(JSON, default=list, nullable=False)
 
 
+class User(TimestampMixin, Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(200), nullable=False)
+    role: Mapped[str] = mapped_column(String(50), default="tester", nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
 class RebalanceProposal(TimestampMixin, Base):
     """A proposed plan from a specialist agent, awaiting the user's approval.
 

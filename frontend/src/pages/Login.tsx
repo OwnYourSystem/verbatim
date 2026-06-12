@@ -2,6 +2,7 @@ import { useState } from "react";
 import { login } from "../api";
 
 export function Login({ onSuccess }: { onSuccess: () => void }) {
+  const [username, setUsername] = useState("owner");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -11,10 +12,10 @@ export function Login({ onSuccess }: { onSuccess: () => void }) {
     setError(null);
     setLoading(true);
     try {
-      await login(password);
+      await login(username, password);
       onSuccess();
     } catch {
-      setError("Incorrect password. Try again.");
+      setError("Incorrect username or password.");
     } finally {
       setLoading(false);
     }
@@ -55,8 +56,40 @@ export function Login({ onSuccess }: { onSuccess: () => void }) {
         >
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em]"
             style={{ color: "var(--color-signal-idle)" }}>
-            Owner access
+            Sign in
           </h2>
+
+          <div className="space-y-2">
+            <label
+              htmlFor="username"
+              className="block text-sm font-medium"
+              style={{ color: "rgba(200,210,255,0.8)" }}
+            >
+              Username
+            </label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              autoFocus
+              placeholder="owner"
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all"
+              style={{
+                background: "rgba(8,12,24,0.8)",
+                border: "1px solid rgba(120,140,220,0.2)",
+                color: "rgba(220,230,255,0.9)",
+                caretColor: "var(--color-signal-ok)",
+              }}
+              onFocus={(e) =>
+                (e.currentTarget.style.borderColor = "rgba(99,60,255,0.6)")
+              }
+              onBlur={(e) =>
+                (e.currentTarget.style.borderColor = "rgba(120,140,220,0.2)")
+              }
+            />
+          </div>
 
           <div className="space-y-2">
             <label
@@ -72,7 +105,6 @@ export function Login({ onSuccess }: { onSuccess: () => void }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              autoFocus
               placeholder="Enter your password"
               className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all"
               style={{
@@ -98,7 +130,7 @@ export function Login({ onSuccess }: { onSuccess: () => void }) {
 
           <button
             type="submit"
-            disabled={loading || !password}
+            disabled={loading || !username || !password}
             className="cosmos-btn-primary w-full"
           >
             {loading ? "Signing in…" : "Sign in"}

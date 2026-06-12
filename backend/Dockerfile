@@ -33,4 +33,4 @@ RUN adduser --disabled-password --gecos "" appuser
 USER appuser
 
 # Run migrations then start server
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1"]
+CMD ["sh", "-c", "alembic upgrade head && python scripts/seed_users.py && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1"]

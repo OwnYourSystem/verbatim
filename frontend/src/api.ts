@@ -59,13 +59,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
-export async function login(password: string): Promise<void> {
+export async function login(username: string, password: string): Promise<void> {
   const res = await fetch(`${BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password }),
+    body: JSON.stringify({ username, password }),
   });
-  if (!res.ok) throw new Error("Incorrect password");
+  if (!res.ok) throw new Error("Incorrect username or password");
   const { access_token } = await res.json();
   setToken(access_token);
 }

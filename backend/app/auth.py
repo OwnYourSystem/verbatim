@@ -1,14 +1,16 @@
-"""Single-user JWT authentication.
+"""Multi-user JWT authentication.
 
 Login flow:
-  POST /auth/login  {password}  →  {access_token, token_type}
+  POST /auth/login  {username, password}  →  {access_token, token_type}
 
-Every other route uses Depends(get_current_user).  The dependency verifies
+Users are stored in the `users` table. The legacy single-user PASSWORD_HASH
+env var still works if no users row exists for "owner" (backward compat).
+
+Every other route uses Depends(get_current_user). The dependency verifies
 the JWT signature and expiry; raises HTTP 401 on any failure.
 
 Environment variables (set in Render, never committed):
-  PASSWORD_HASH   bcrypt hash of the owner's password — generate with:
-                  python -c "from passlib.hash import bcrypt; print(bcrypt.hash('pw'))"
+  PASSWORD_HASH   bcrypt hash of the owner's password (legacy fallback)
   JWT_SECRET      32+ random bytes, e.g. openssl rand -hex 32
 """
 from __future__ import annotations
@@ -35,17 +37,17 @@ def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.verify(plain, hashed)
 
 
-def create_access_token() -> str:
+def create_access_token(subject: str) -> str:
     settings = get_settings()
     expire = datetime.now(UTC) + timedelta(minutes=settings.jwt_expire_minutes)
-    payload = {"sub": "owner", "exp": expire}
+    payload = {"sub": subject, "exp": expire}
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> str:
-    """FastAPI dependency — validates JWT, returns subject ('owner').
+    """FastAPI dependency — validates JWT, returns username.
 
     Raises HTTP 401 on missing, expired, or tampered tokens.
     """
@@ -63,8 +65,8 @@ def get_current_user(
             algorithms=[settings.jwt_algorithm],
         )
         sub: str | None = payload.get("sub")
-        if sub != "owner":
-            raise JWTError("bad subject")
+        if not sub:
+            raise JWTError("missing subject")
         return sub
     except JWTError as err:
         raise HTTPException(
