@@ -16,6 +16,7 @@ class _ORM(BaseModel):
 # ---- System ----
 class SystemBase(BaseModel):
     name: str = Field(min_length=1, max_length=200)
+    icon: str | None = Field(default=None, max_length=10)
     description: str | None = None
     status: SystemStatus = SystemStatus.active
     purpose: str | None = None
@@ -31,6 +32,7 @@ class SystemCreate(SystemBase):
 
 class SystemUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
+    icon: str | None = Field(default=None, max_length=10)
     description: str | None = None
     status: SystemStatus | None = None
     purpose: str | None = None

@@ -95,6 +95,7 @@ class System(TimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
+    icon: Mapped[str | None] = mapped_column(String(10))  # emoji, e.g. "💻"
     description: Mapped[str | None] = mapped_column(Text)
     status: Mapped[SystemStatus] = mapped_column(
         Enum(SystemStatus), default=SystemStatus.active, nullable=False

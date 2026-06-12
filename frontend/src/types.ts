@@ -4,6 +4,7 @@ export type SystemStatus = "active" | "paused" | "archived";
 export interface System {
   id: number;
   name: string;
+  icon: string | null;
   description: string | null;
   status: SystemStatus;
   purpose: string | null;

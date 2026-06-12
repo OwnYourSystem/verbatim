@@ -3,6 +3,7 @@ import { api } from "../api";
 import type { TodayView } from "../types";
 import { Card, Empty, PageHeader, StatusBadge } from "../components/ui";
 import { PriorityBadge } from "../components/WorkItemEditor";
+import { SystemIconBadge, suggestIcon } from "../components/SystemIcon";
 import type { Task } from "../types";
 
 /** Why a task landed in the Flagged panel: 🚩 manual flag, overdue, or blocked. */
@@ -83,6 +84,7 @@ export function Dashboard() {
         {data.focus_system ? (
           <div>
             <div className="flex items-center gap-3">
+              <SystemIconBadge icon={data.focus_system.icon ?? suggestIcon(data.focus_system.name)} size="lg" />
               <span className="text-lg font-bold">{data.focus_system.name}</span>
               <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/40">
                 priority {data.focus_system.current_priority ?? "—"}

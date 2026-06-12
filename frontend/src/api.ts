@@ -76,9 +76,9 @@ export const api = {
 
   // Systems
   listSystems: () => request<System[]>("/systems"),
-  createSystem: (body: { name: string; description?: string }) =>
+  createSystem: (body: { name: string; icon?: string; description?: string }) =>
     request<System>("/systems", { method: "POST", body: JSON.stringify(body) }),
-  updateSystem: (id: number, body: Partial<{ name: string; status: SystemStatus }>) =>
+  updateSystem: (id: number, body: Partial<{ name: string; icon: string | null; status: SystemStatus }>) =>
     request<System>(`/systems/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   deleteSystem: (id: number) =>
     request<void>(`/systems/${id}`, { method: "DELETE" }),

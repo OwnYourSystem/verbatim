@@ -3,10 +3,12 @@ import { api } from "../api";
 import type { Subtask, System, Task, WorkItemInput } from "../types";
 import { Card, Empty, PageHeader, StatusBadge } from "../components/ui";
 import { HoursBar, PriorityBadge, WorkItemEditor } from "../components/WorkItemEditor";
+import { IconPicker, suggestIcon } from "../components/SystemIcon";
 
 export function Systems() {
   const [systems, setSystems] = useState<System[]>([]);
   const [name, setName] = useState("");
+  const [icon, setIcon] = useState("🗂️");
   const [openId, setOpenId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -19,8 +21,9 @@ export function Systems() {
 
   const addSystem = async () => {
     if (!name.trim()) return;
-    await api.createSystem({ name: name.trim() });
+    await api.createSystem({ name: name.trim(), icon });
     setName("");
+    setIcon("🗂️");
     load();
   };
 
@@ -54,24 +57,37 @@ export function Systems() {
       )}
 
       <Card title="Add a system">
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <IconPicker value={icon} onChange={setIcon} />
           <input
             className="input-base flex-1"
             placeholder="e.g. SAP Datasphere CLI"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              setIcon(suggestIcon(e.target.value));
+            }}
             onKeyDown={(e) => e.key === "Enter" && addSystem()}
           />
           <button onClick={addSystem} className="btn-primary">
             Add
           </button>
         </div>
+        <p className="mt-2 text-[11px] text-slate-500">
+          Icon auto-suggests as you type — click it to change.
+        </p>
       </Card>
 
       <div className="space-y-4">
         {systems.map((s) => (
           <Card key={s.id}>
             <div className="flex items-center gap-3">
+              <IconPicker
+                value={s.icon ?? suggestIcon(s.name)}
+                onChange={(newIcon) => {
+                  api.updateSystem(s.id, { icon: newIcon }).then(load);
+                }}
+              />
               <button
                 onClick={() => setOpenId(openId === s.id ? null : s.id)}
                 className="font-semibold flex-1 text-left transition-colors hover:text-emerald-300"
