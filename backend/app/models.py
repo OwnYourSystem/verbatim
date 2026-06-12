@@ -84,6 +84,9 @@ class WorkItemMixin:
     )
     last_checkpoint: Mapped[str | None] = mapped_column(String(100))
     required_demo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # User-raised flag: "this needs attention". Auto-flagging (overdue / blocked)
+    # is derived in services.build_today; this column is the manual counterpart.
+    flagged: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
 

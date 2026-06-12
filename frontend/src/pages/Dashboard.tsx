@@ -2,6 +2,34 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { TodayView } from "../types";
 import { Card, Empty, PageHeader, StatusBadge } from "../components/ui";
+import { PriorityBadge } from "../components/WorkItemEditor";
+import type { Task } from "../types";
+
+/** Why a task landed in the Flagged panel: 🚩 manual flag, overdue, or blocked. */
+function FlagReasons({ task }: { task: Task }) {
+  const reasons: { label: string; color: string }[] = [];
+  if (task.flagged) reasons.push({ label: "🚩 flagged", color: "var(--color-signal-warn)" });
+  if (task.time_left_days != null && task.time_left_days < 0)
+    reasons.push({
+      label: `${Math.abs(task.time_left_days)}d overdue`,
+      color: "var(--color-signal-crit)",
+    });
+  if (task.status === "blocked")
+    reasons.push({ label: "blocked", color: "var(--color-signal-crit)" });
+  return (
+    <span className="flex gap-1.5">
+      {reasons.map((r) => (
+        <span
+          key={r.label}
+          className="text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap"
+          style={{ color: r.color, border: `1px solid ${r.color}`, background: "rgba(8,12,24,0.5)" }}
+        >
+          {r.label}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 export function Dashboard() {
   const [data, setData] = useState<TodayView | null>(null);
@@ -72,8 +100,10 @@ export function Dashboard() {
                     onChange={() => toggle(t.id)}
                     className="h-4 w-4 rounded accent-emerald-500"
                   />
+                  <PriorityBadge priority={t.priority} />
                   <span className={`flex-1 ${selected.has(t.id) ? "line-through text-slate-500" : ""}`}>
                     {t.title}
+                    {t.flagged && <span title="Flagged: needs attention" className="ml-1.5">🚩</span>}
                   </span>
                   {t.deadline && (
                     <span className="text-xs text-slate-400">{t.deadline}</span>
@@ -106,11 +136,13 @@ export function Dashboard() {
           </ul>
         </Card>
 
-        <Card title="Flagged (overdue or blocked)">
+        <Card title="Flagged (🚩 raised, overdue or blocked)">
           <ul className="space-y-2.5">
             {data.flagged.map((t) => (
-              <li key={t.id} className="flex justify-between items-center text-sm">
-                <span>{t.title}</span>
+              <li key={t.id} className="flex items-center gap-2 text-sm">
+                <PriorityBadge priority={t.priority} />
+                <span className="flex-1">{t.title}</span>
+                <FlagReasons task={t} />
                 <StatusBadge status={t.status} />
               </li>
             ))}

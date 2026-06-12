@@ -74,6 +74,7 @@ class WorkItemBase(BaseModel):
     data_exposure_concern: bool = False
     last_checkpoint: str | None = Field(default=None, max_length=100)
     required_demo: bool = False
+    flagged: bool = False  # user-raised "needs attention" flag
     position: int = 0
 
 
@@ -89,6 +90,7 @@ class WorkItemUpdate(BaseModel):
     data_exposure_concern: bool | None = None
     last_checkpoint: str | None = Field(default=None, max_length=100)
     required_demo: bool | None = None
+    flagged: bool | None = None
     position: int | None = None
 
 

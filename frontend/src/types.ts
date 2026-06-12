@@ -28,6 +28,7 @@ export interface WorkItemFields {
   data_exposure_concern: boolean;
   last_checkpoint: string | null;
   required_demo: boolean;
+  flagged: boolean;
   position: number;
   // server-computed, read-only
   spent_hours: number;
@@ -61,6 +62,7 @@ export type WorkItemInput = Partial<{
   data_exposure_concern: boolean;
   last_checkpoint: string | null;
   required_demo: boolean;
+  flagged: boolean;
   position: number;
 }>;
 

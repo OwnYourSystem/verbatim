@@ -89,6 +89,12 @@ def _task_sort_key(task: Task) -> tuple[int, date]:
     return (0, task.deadline) if task.deadline else (1, date.max)
 
 
+def _priority_sort_key(task: Task) -> tuple[int, int, date]:
+    """P1 (highest) first, then earlier deadline; no-deadline sorts last."""
+    has_deadline = 0 if task.deadline else 1
+    return (task.priority, has_deadline, task.deadline or date.max)
+
+
 def _open_tasks(db: Session) -> list[Task]:
     stmt = select(Task).where(Task.status != WorkStatus.done)
     return list(db.execute(stmt).scalars().all())
@@ -125,7 +131,7 @@ def build_today(db: Session, today: date | None = None) -> dict:
     if focus_system is not None:
         focus_tasks = sorted(
             (t for t in focus_system.tasks if t.status != WorkStatus.done),
-            key=_task_sort_key,
+            key=_priority_sort_key,
         )
 
     open_tasks = _open_tasks(db)
@@ -137,9 +143,11 @@ def build_today(db: Session, today: date | None = None) -> dict:
         (
             t
             for t in open_tasks
-            if (t.deadline and t.deadline < today) or t.status == WorkStatus.blocked
+            if t.flagged
+            or (t.deadline and t.deadline < today)
+            or t.status == WorkStatus.blocked
         ),
-        key=_task_sort_key,
+        key=_priority_sort_key,
     )
 
     return {

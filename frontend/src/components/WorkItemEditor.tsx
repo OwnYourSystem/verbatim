@@ -98,6 +98,7 @@ export function WorkItemEditor({
       data_exposure_concern: draft.data_exposure_concern,
       last_checkpoint: draft.last_checkpoint,
       required_demo: draft.required_demo,
+      flagged: draft.flagged,
     };
     await onSave(patch);
     setSaved(true);
@@ -222,6 +223,15 @@ export function WorkItemEditor({
             className="accent-emerald-500"
           />
           🎬 Required demo
+        </label>
+        <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={draft.flagged}
+            onChange={(e) => setDraft({ ...draft, flagged: e.target.checked })}
+            className="accent-amber-500"
+          />
+          🚩 Flag — needs attention (shows on Today)
         </label>
       </div>
 
