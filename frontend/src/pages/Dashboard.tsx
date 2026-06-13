@@ -3,7 +3,7 @@ import { api } from "../api";
 import type { TodayView } from "../types";
 import { Card, Empty, PageHeader, StatusBadge } from "../components/ui";
 import { PriorityBadge } from "../components/WorkItemEditor";
-import { SystemIconBadge, suggestIcon } from "../components/SystemIcon";
+
 import type { Task } from "../types";
 
 /** Why a task landed in the Flagged panel: 🚩 manual flag, overdue, or blocked. */
@@ -81,16 +81,20 @@ export function Dashboard() {
       />
 
       <Card title="Today's focus">
-        {data.focus_system ? (
+        {data.focus_tasks.length > 0 ? (
           <div>
-            <div className="flex items-center gap-3">
-              <SystemIconBadge icon={data.focus_system.icon ?? suggestIcon(data.focus_system.name)} size="lg" />
-              <span className="text-lg font-bold">{data.focus_system.name}</span>
-              <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/40">
-                priority {data.focus_system.current_priority ?? "—"}
+            <div className="flex items-center gap-2 mb-4">
+              <span
+                className="text-[11px] font-bold px-2 py-0.5 rounded-md"
+                style={{ color: "var(--color-signal-crit)", border: "1px solid var(--color-signal-crit)", background: "rgba(8,12,24,0.6)" }}
+              >
+                P{Math.min(...data.focus_tasks.map((t) => t.priority))} — highest priority
+              </span>
+              <span className="text-[11px] text-slate-500">
+                Todo &amp; In Progress across all active systems
               </span>
             </div>
-            <ul className="mt-4 space-y-2.5">
+            <ul className="space-y-2.5">
               {data.focus_tasks.map((t) => (
                 <li
                   key={t.id}
@@ -107,18 +111,20 @@ export function Dashboard() {
                     {t.title}
                     {t.flagged && <span title="Flagged: needs attention" className="ml-1.5">🚩</span>}
                   </span>
+                  {data.focus_system && (
+                    <span className="text-[10px] text-slate-500 hidden sm:inline">{data.focus_system.name}</span>
+                  )}
                   {t.deadline && (
                     <span className="text-xs text-slate-400">{t.deadline}</span>
                   )}
                   <StatusBadge status={t.status} />
                 </li>
               ))}
-              {data.focus_tasks.length === 0 && <Empty>No open tasks.</Empty>}
             </ul>
           </div>
         ) : (
           <Empty>
-            No focus system yet. Add a system with open tasks and set its priority.
+            No P1 tasks in Todo or In Progress. Set a task's priority to P1 to see it here.
           </Empty>
         )}
       </Card>

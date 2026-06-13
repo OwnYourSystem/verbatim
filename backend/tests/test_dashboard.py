@@ -47,16 +47,37 @@ def _make_system(name: str, score: int) -> int:
     return sid
 
 
-def test_focus_picks_highest_priority_system_with_open_work():
-    low = _make_system("Low priority system", 20)
-    high = _make_system("High priority system", 95)
-    client.post("/tasks", json={"system_id": low, "title": "low task"})
-    client.post("/tasks", json={"system_id": high, "title": "high task"})
+def test_focus_shows_p1_todo_and_in_progress_tasks():
+    sid = _make_system("My System", 50)
+    # P1 todo — should appear
+    client.post("/tasks", json={"system_id": sid, "title": "p1 todo", "priority": 1})
+    # P1 in_progress — should appear
+    client.post(
+        "/tasks",
+        json={"system_id": sid, "title": "p1 inprog", "priority": 1, "status": "in_progress"},
+    )
+    # P2 todo — should NOT appear (not highest priority present)
+    client.post("/tasks", json={"system_id": sid, "title": "p2 task", "priority": 2})
+    # P1 done — should NOT appear
+    client.post(
+        "/tasks",
+        json={"system_id": sid, "title": "p1 done", "priority": 1, "status": "done"},
+    )
+    # P1 blocked — should NOT appear (only todo/in_progress)
+    client.post(
+        "/tasks",
+        json={"system_id": sid, "title": "p1 blocked", "priority": 1, "status": "blocked"},
+    )
 
     data = client.get("/dashboard/today").json()
-    assert data["focus_system"]["id"] == high
-    assert data["focus_system"]["current_priority"] == 95
-    assert [t["title"] for t in data["focus_tasks"]] == ["high task"]
+    titles = [t["title"] for t in data["focus_tasks"]]
+    assert "p1 todo" in titles
+    assert "p1 inprog" in titles
+    assert "p2 task" not in titles
+    assert "p1 done" not in titles
+    assert "p1 blocked" not in titles
+    # all shown tasks are P1
+    assert all(t["priority"] == 1 for t in data["focus_tasks"])
 
 
 def test_upcoming_and_flagged_buckets():

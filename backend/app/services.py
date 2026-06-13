@@ -81,7 +81,9 @@ def emit_event(event_type: str, payload: dict) -> None:
 # ---------------------------------------------------------------------------
 
 UPCOMING_WINDOW_DAYS = 7
+FOCUS_STATUSES = (WorkStatus.todo, WorkStatus.in_progress)
 OPEN_STATUSES = (WorkStatus.todo, WorkStatus.in_progress, WorkStatus.blocked)
+FOCUS_PRIORITY = 1  # P1 = highest
 
 
 def _task_sort_key(task: Task) -> tuple[int, date]:
@@ -100,25 +102,36 @@ def _open_tasks(db: Session) -> list[Task]:
     return list(db.execute(stmt).scalars().all())
 
 
-def choose_focus_system(db: Session, today: date | None = None) -> System | None:
-    """Pick the primary System for today: the active System with open work and
-    the highest current-month priority. Ties broken by the nearest deadline."""
-    today = today or date.today()
-    open_by_system: dict[int, list[Task]] = {}
-    for task in _open_tasks(db):
-        open_by_system.setdefault(task.system_id, []).append(task)
+def choose_focus_tasks(db: Session) -> list[Task]:
+    """Return all P1 tasks in Todo or In-Progress across all active systems.
 
-    best: tuple[int, date, System] | None = None  # (-priority, nearest_deadline, system)
-    for system_id, tasks in open_by_system.items():
-        system = db.get(System, system_id)
-        if system is None or system.status != SystemStatus.active:
-            continue
-        priority = get_current_priority(db, system_id) or 0
-        nearest = min((t.deadline for t in tasks if t.deadline), default=date.max)
-        candidate = (-priority, nearest, system)
-        if best is None or candidate[:2] < best[:2]:
-            best = candidate
-    return best[2] if best else None
+    Sorted by nearest deadline first (no deadline sorts last).
+    Falls back to the lowest priority number available if no P1 tasks exist.
+    """
+    stmt = (
+        select(Task)
+        .join(Task.system)
+        .where(
+            Task.status.in_([WorkStatus.todo, WorkStatus.in_progress]),
+            System.status == SystemStatus.active,
+        )
+    )
+    candidates = list(db.execute(stmt).scalars().all())
+    if not candidates:
+        return []
+
+    # Find the highest priority level actually present (lowest number = highest priority)
+    best_priority = min(t.priority for t in candidates)
+    focus = [t for t in candidates if t.priority == best_priority]
+    return sorted(focus, key=_task_sort_key)
+
+
+def choose_focus_system(db: Session, today: date | None = None) -> System | None:
+    """Return the system of the first P1 focus task, for display context."""
+    tasks = choose_focus_tasks(db)
+    if not tasks:
+        return None
+    return db.get(System, tasks[0].system_id)
 
 
 def build_today(db: Session, today: date | None = None) -> dict:
@@ -126,13 +139,8 @@ def build_today(db: Session, today: date | None = None) -> dict:
     today = today or date.today()
     horizon = today + timedelta(days=UPCOMING_WINDOW_DAYS)
 
-    focus_system = choose_focus_system(db, today)
-    focus_tasks: list[Task] = []
-    if focus_system is not None:
-        focus_tasks = sorted(
-            (t for t in focus_system.tasks if t.status != WorkStatus.done),
-            key=_priority_sort_key,
-        )
+    focus_tasks = choose_focus_tasks(db)
+    focus_system = db.get(System, focus_tasks[0].system_id) if focus_tasks else None
 
     open_tasks = _open_tasks(db)
     upcoming = sorted(
