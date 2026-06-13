@@ -40,6 +40,7 @@ export interface WorkItemFields {
 export interface Task extends WorkItemFields {
   id: number;
   system_id: number;
+  system_name: string | null;
   created_at: string;
   updated_at: string;
 }

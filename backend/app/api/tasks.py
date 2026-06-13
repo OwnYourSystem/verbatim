@@ -30,7 +30,9 @@ router = APIRouter(tags=["tasks"])
 
 # ---- read builders (attach computed fields) ----
 def _task_read(task: Task) -> TaskRead:
-    return TaskRead.model_validate(task).model_copy(update=computed_fields(task))
+    extra = computed_fields(task)
+    extra["system_name"] = task.system.name if task.system else None
+    return TaskRead.model_validate(task).model_copy(update=extra)
 
 
 def _subtask_read(db: Session, subtask: Subtask) -> SubtaskRead:

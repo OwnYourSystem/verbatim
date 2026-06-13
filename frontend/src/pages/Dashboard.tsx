@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api";
 import type { TodayView } from "../types";
 import { Card, Empty, PageHeader, StatusBadge } from "../components/ui";
 import { PriorityBadge } from "../components/WorkItemEditor";
-
 import type { Task } from "../types";
+
+/** URL that deep-links to a specific task inside the Systems page. */
+function taskLink(t: Task) {
+  return `/systems?open=${t.system_id}&task=${t.id}`;
+}
 
 /** Why a task landed in the Flagged panel: 🚩 manual flag, overdue, or blocked. */
 function FlagReasons({ task }: { task: Task }) {
@@ -98,26 +103,36 @@ export function Dashboard() {
               {data.focus_tasks.map((t) => (
                 <li
                   key={t.id}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 bg-slate-900/50 border border-slate-800 transition-colors hover:border-slate-700"
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 bg-slate-900/50 border border-slate-800 transition-colors hover:border-slate-700 group"
                 >
                   <input
                     type="checkbox"
                     checked={selected.has(t.id)}
                     onChange={() => toggle(t.id)}
-                    className="h-4 w-4 rounded accent-emerald-500"
+                    className="h-4 w-4 rounded accent-emerald-500 shrink-0"
                   />
                   <PriorityBadge priority={t.priority} />
-                  <span className={`flex-1 ${selected.has(t.id) ? "line-through text-slate-500" : ""}`}>
+                  <Link
+                    to={taskLink(t)}
+                    className={`flex-1 text-sm group-hover:text-emerald-300 transition-colors ${selected.has(t.id) ? "line-through text-slate-500" : ""}`}
+                  >
                     {t.title}
                     {t.flagged && <span title="Flagged: needs attention" className="ml-1.5">🚩</span>}
-                  </span>
-                  {data.focus_system && (
-                    <span className="text-[10px] text-slate-500 hidden sm:inline">{data.focus_system.name}</span>
+                  </Link>
+                  {t.system_name && (
+                    <span className="text-[10px] text-slate-500 hidden sm:inline whitespace-nowrap">{t.system_name}</span>
                   )}
                   {t.deadline && (
-                    <span className="text-xs text-slate-400">{t.deadline}</span>
+                    <span className="text-xs text-slate-400 whitespace-nowrap">{t.deadline}</span>
                   )}
                   <StatusBadge status={t.status} />
+                  <Link
+                    to={taskLink(t)}
+                    className="text-[10px] text-slate-600 hover:text-emerald-400 transition-colors whitespace-nowrap"
+                    title="Open in Systems"
+                  >
+                    →
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -133,11 +148,17 @@ export function Dashboard() {
         <Card title="Upcoming deadlines (next 7 days)">
           <ul className="space-y-2.5">
             {data.upcoming_deadlines.map((t) => (
-              <li key={t.id} className="flex justify-between items-center text-sm">
-                <span>{t.title}</span>
-                <span className="text-xs font-medium text-amber-300/90 bg-amber-500/10 border border-amber-500/30 rounded-full px-2.5 py-0.5">
+              <li key={t.id} className="flex items-center gap-2 text-sm group">
+                <Link to={taskLink(t)} className="flex-1 group-hover:text-emerald-300 transition-colors">
+                  {t.title}
+                </Link>
+                {t.system_name && (
+                  <span className="text-[10px] text-slate-500 hidden sm:inline">{t.system_name}</span>
+                )}
+                <span className="text-xs font-medium text-amber-300/90 bg-amber-500/10 border border-amber-500/30 rounded-full px-2.5 py-0.5 whitespace-nowrap">
                   {t.deadline}
                 </span>
+                <Link to={taskLink(t)} className="text-[10px] text-slate-600 hover:text-emerald-400 transition-colors" title="Open in Systems">→</Link>
               </li>
             ))}
             {data.upcoming_deadlines.length === 0 && <Empty>Nothing due soon.</Empty>}
@@ -147,11 +168,12 @@ export function Dashboard() {
         <Card title="Flagged (🚩 raised, overdue or blocked)">
           <ul className="space-y-2.5">
             {data.flagged.map((t) => (
-              <li key={t.id} className="flex items-center gap-2 text-sm">
+              <li key={t.id} className="flex items-center gap-2 text-sm group">
                 <PriorityBadge priority={t.priority} />
-                <span className="flex-1">{t.title}</span>
+                <Link to={taskLink(t)} className="flex-1 group-hover:text-emerald-300 transition-colors">{t.title}</Link>
                 <FlagReasons task={t} />
                 <StatusBadge status={t.status} />
+                <Link to={taskLink(t)} className="text-[10px] text-slate-600 hover:text-emerald-400 transition-colors" title="Open in Systems">→</Link>
               </li>
             ))}
             {data.flagged.length === 0 && <Empty>Nothing flagged.</Empty>}

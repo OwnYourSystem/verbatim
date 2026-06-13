@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+
 import { api } from "../api";
 import type { Subtask, System, Task, WorkItemInput } from "../types";
 import { Card, Empty, PageHeader, StatusBadge } from "../components/ui";
@@ -12,11 +14,30 @@ export function Systems() {
   const [openId, setOpenId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Capture deep-link params once on mount; cleared immediately so back-nav is clean
+  const [targetTaskId] = useState<number | null>(() => {
+    const t = searchParams.get("task");
+    return t ? Number(t) : null;
+  });
+  const [linkedSystemId] = useState<number | null>(() => {
+    const o = searchParams.get("open");
+    return o ? Number(o) : null;
+  });
 
   const load = () =>
     api.listSystems().then(setSystems).catch((e) => setError(String(e)));
+
   useEffect(() => {
     load();
+  }, []);
+
+  // Deep-link support: ?open=SYSTEM_ID&task=TASK_ID
+  useEffect(() => {
+    if (linkedSystemId) {
+      setOpenId(linkedSystemId);
+      setSearchParams({}, { replace: true });
+    }
   }, []);
 
   const addSystem = async () => {
@@ -121,7 +142,12 @@ export function Systems() {
                 delete
               </button>
             </div>
-            {openId === s.id && <TaskManager systemId={s.id} />}
+            {openId === s.id && (
+              <TaskManager
+                systemId={s.id}
+                targetTaskId={s.id === linkedSystemId ? targetTaskId : null}
+              />
+            )}
           </Card>
         ))}
         {systems.length === 0 && <Empty>No systems yet. Add one above.</Empty>}
@@ -130,7 +156,7 @@ export function Systems() {
   );
 }
 
-function TaskManager({ systemId }: { systemId: number }) {
+function TaskManager({ systemId, targetTaskId }: { systemId: number; targetTaskId: number | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [title, setTitle] = useState("");
   const [deadline, setDeadline] = useState("");
@@ -200,7 +226,7 @@ function TaskManager({ systemId }: { systemId: number }) {
         </button>
       </div>
       {tasks.map((t) => (
-        <TaskRow key={t.id} task={t} onChange={load} />
+        <TaskRow key={t.id} task={t} onChange={load} highlight={t.id === targetTaskId} />
       ))}
       {tasks.length === 0 && (
         <p className="text-xs text-slate-500">No tasks yet — add one above.</p>
@@ -209,8 +235,15 @@ function TaskManager({ systemId }: { systemId: number }) {
   );
 }
 
-function TaskRow({ task, onChange }: { task: Task; onChange: () => void }) {
-  const [open, setOpen] = useState(false);
+function TaskRow({ task, onChange, highlight = false }: { task: Task; onChange: () => void; highlight?: boolean }) {
+  const [open, setOpen] = useState(highlight); // auto-open if deep-linked
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (highlight && rowRef.current) {
+      rowRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlight]);
 
   const save = async (patch: WorkItemInput) => {
     await api.updateTask(task.id, patch);
@@ -222,7 +255,12 @@ function TaskRow({ task, onChange }: { task: Task; onChange: () => void }) {
   };
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/30">
+    <div
+      ref={rowRef}
+      className={`rounded-xl border bg-slate-900/30 transition-all duration-700 ${
+        highlight ? "border-emerald-500/60 shadow-[0_0_12px_rgba(52,211,153,0.15)]" : "border-slate-800"
+      }`}
+    >
       <div className="flex items-center gap-2 text-sm px-2.5 py-2">
         <button onClick={() => setOpen(!open)} className="text-slate-500">
           {open ? "▾" : "▸"}

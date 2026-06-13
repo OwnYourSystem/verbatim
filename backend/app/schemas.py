@@ -116,6 +116,7 @@ class TaskUpdate(WorkItemUpdate):
 class TaskRead(_ORM, WorkItemBase, _Computed):
     id: int
     system_id: int
+    system_name: str | None = None  # filled by endpoint
     created_at: datetime
     updated_at: datetime
 
