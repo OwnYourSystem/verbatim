@@ -140,11 +140,11 @@ export function Dashboard() {
                             key={st.id}
                             className="flex items-center gap-2 text-sm rounded-lg px-3 py-1.5 bg-slate-900/30 border border-slate-800/60"
                           >
-                            <span className="text-slate-600 shrink-0">↳</span>
-                            <span className="text-[10px] text-slate-500 shrink-0 hidden sm:inline whitespace-nowrap">
+                            <span className="text-slate-600 shrink-0 text-xs">↳</span>
+                            <span className="text-[11px] text-emerald-600 font-medium shrink-0 whitespace-nowrap">
                               {t.title}
                             </span>
-                            <span className="text-slate-700 shrink-0 hidden sm:inline">/</span>
+                            <span className="text-slate-600 shrink-0 text-xs">/</span>
                             <Link
                               to={`/systems?open=${t.system_id}&task=${t.id}`}
                               className="flex-1 text-sm text-slate-300 hover:text-emerald-300 transition-colors"
