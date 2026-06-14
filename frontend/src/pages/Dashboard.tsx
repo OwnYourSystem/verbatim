@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
-import type { TodayView } from "../types";
+import type { Subtask, Task, TodayView } from "../types";
 import { Card, Empty, PageHeader, StatusBadge } from "../components/ui";
 import { PriorityBadge } from "../components/WorkItemEditor";
-import type { Task } from "../types";
 
 /** URL that deep-links to a specific task inside the Systems page. */
 function taskLink(t: Task) {
@@ -100,41 +99,65 @@ export function Dashboard() {
               </span>
             </div>
             <ul className="space-y-2.5">
-              {data.focus_tasks.map((t) => (
-                <li
-                  key={t.id}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 bg-slate-900/50 border border-slate-800 transition-colors hover:border-slate-700 group"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected.has(t.id)}
-                    onChange={() => toggle(t.id)}
-                    className="h-4 w-4 rounded accent-emerald-500 shrink-0"
-                  />
-                  <PriorityBadge priority={t.priority} />
-                  <Link
-                    to={taskLink(t)}
-                    className={`flex-1 text-sm group-hover:text-emerald-300 transition-colors ${selected.has(t.id) ? "line-through text-slate-500" : ""}`}
-                  >
-                    {t.title}
-                    {t.flagged && <span title="Flagged: needs attention" className="ml-1.5">🚩</span>}
-                  </Link>
-                  {t.system_name && (
-                    <span className="text-[10px] text-slate-500 hidden sm:inline whitespace-nowrap">{t.system_name}</span>
-                  )}
-                  {t.deadline && (
-                    <span className="text-xs text-slate-400 whitespace-nowrap">{t.deadline}</span>
-                  )}
-                  <StatusBadge status={t.status} />
-                  <Link
-                    to={taskLink(t)}
-                    className="text-[10px] text-slate-600 hover:text-emerald-400 transition-colors whitespace-nowrap"
-                    title="Open in Systems"
-                  >
-                    →
-                  </Link>
-                </li>
-              ))}
+              {data.focus_tasks.map((t) => {
+                const subtasks = data.focus_subtasks.filter((st: Subtask) => st.task_id === t.id);
+                return (
+                  <li key={t.id}>
+                    <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 bg-slate-900/50 border border-slate-800 transition-colors hover:border-slate-700 group">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(t.id)}
+                        onChange={() => toggle(t.id)}
+                        className="h-4 w-4 rounded accent-emerald-500 shrink-0"
+                      />
+                      <PriorityBadge priority={t.priority} />
+                      <Link
+                        to={taskLink(t)}
+                        className={`flex-1 text-sm group-hover:text-emerald-300 transition-colors ${selected.has(t.id) ? "line-through text-slate-500" : ""}`}
+                      >
+                        {t.title}
+                        {t.flagged && <span title="Flagged: needs attention" className="ml-1.5">🚩</span>}
+                      </Link>
+                      {t.system_name && (
+                        <span className="text-[10px] text-slate-500 hidden sm:inline whitespace-nowrap">{t.system_name}</span>
+                      )}
+                      {t.deadline && (
+                        <span className="text-xs text-slate-400 whitespace-nowrap">{t.deadline}</span>
+                      )}
+                      <StatusBadge status={t.status} />
+                      <Link
+                        to={taskLink(t)}
+                        className="text-[10px] text-slate-600 hover:text-emerald-400 transition-colors whitespace-nowrap"
+                        title="Open in Systems"
+                      >
+                        →
+                      </Link>
+                    </div>
+                    {subtasks.length > 0 && (
+                      <ul className="mt-1 space-y-1 pl-6">
+                        {subtasks.map((st: Subtask) => (
+                          <li
+                            key={st.id}
+                            className="flex items-center gap-2 text-sm rounded-lg px-3 py-1.5 bg-slate-900/30 border border-slate-800/60"
+                          >
+                            <span className="text-slate-600 shrink-0">↳</span>
+                            <Link
+                              to={`/systems?open=${t.system_id}&task=${t.id}`}
+                              className="flex-1 text-sm text-slate-300 hover:text-emerald-300 transition-colors"
+                            >
+                              {st.title}
+                            </Link>
+                            {st.deadline && (
+                              <span className="text-xs text-slate-400 whitespace-nowrap">{st.deadline}</span>
+                            )}
+                            <StatusBadge status={st.status} />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ) : (

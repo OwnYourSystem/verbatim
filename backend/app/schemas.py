@@ -439,5 +439,6 @@ class TodayView(BaseModel):
     day: date
     focus_system: SystemRead | None
     focus_tasks: list[TaskRead]
+    focus_subtasks: list[SubtaskRead] = []
     upcoming_deadlines: list[TaskRead]
     flagged: list[TaskRead]

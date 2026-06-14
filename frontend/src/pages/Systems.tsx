@@ -12,6 +12,8 @@ export function Systems() {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("🗂️");
   const [openId, setOpenId] = useState<number | null>(null);
+  const [editingNameId, setEditingNameId] = useState<number | null>(null);
+  const [editingNameValue, setEditingNameValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -109,13 +111,59 @@ export function Systems() {
                   api.updateSystem(s.id, { icon: newIcon }).then(load);
                 }}
               />
-              <button
-                onClick={() => setOpenId(openId === s.id ? null : s.id)}
-                className="font-semibold flex-1 text-left transition-colors hover:text-emerald-300"
-              >
-                <span className="text-slate-500 mr-1.5">{openId === s.id ? "▾" : "▸"}</span>
-                {s.name}
-              </button>
+              {editingNameId === s.id ? (
+                <div className="flex items-center gap-1.5 flex-1">
+                  <span className="text-slate-500 mr-1.5">{openId === s.id ? "▾" : "▸"}</span>
+                  <input
+                    className="input-base flex-1 !py-1 font-semibold"
+                    value={editingNameValue}
+                    autoFocus
+                    onChange={(e) => setEditingNameValue(e.target.value)}
+                    onKeyDown={async (e) => {
+                      if (e.key === "Enter") {
+                        const trimmed = editingNameValue.trim();
+                        if (trimmed) { await api.updateSystem(s.id, { name: trimmed }); load(); }
+                        setEditingNameId(null);
+                      } else if (e.key === "Escape") {
+                        setEditingNameId(null);
+                      }
+                    }}
+                  />
+                  <button
+                    className="btn-secondary !px-2 !py-1 !text-xs"
+                    onClick={async () => {
+                      const trimmed = editingNameValue.trim();
+                      if (trimmed) { await api.updateSystem(s.id, { name: trimmed }); load(); }
+                      setEditingNameId(null);
+                    }}
+                  >
+                    Save
+                  </button>
+                  <button
+                    className="btn-ghost-danger !px-2 !py-1"
+                    onClick={() => setEditingNameId(null)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                  <button
+                    onClick={() => setOpenId(openId === s.id ? null : s.id)}
+                    className="font-semibold flex-1 text-left transition-colors hover:text-emerald-300 min-w-0"
+                  >
+                    <span className="text-slate-500 mr-1.5">{openId === s.id ? "▾" : "▸"}</span>
+                    {s.name}
+                  </button>
+                  <button
+                    onClick={() => { setEditingNameId(s.id); setEditingNameValue(s.name); }}
+                    className="text-slate-500 hover:text-emerald-400 transition-colors text-sm shrink-0"
+                    title="Rename system"
+                  >
+                    ✎
+                  </button>
+                </div>
+              )}
               <label className="text-xs text-slate-400">monthly priority</label>
               <input
                 type="number"

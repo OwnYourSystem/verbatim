@@ -142,6 +142,15 @@ def build_today(db: Session, today: date | None = None) -> dict:
     focus_tasks = choose_focus_tasks(db)
     focus_system = db.get(System, focus_tasks[0].system_id) if focus_tasks else None
 
+    focus_task_ids = {t.id for t in focus_tasks}
+    focus_subtasks: list = []
+    if focus_task_ids:
+        stmt = select(Subtask).where(
+            Subtask.task_id.in_(focus_task_ids),
+            Subtask.status.in_([WorkStatus.todo, WorkStatus.in_progress]),
+        )
+        focus_subtasks = list(db.execute(stmt).scalars().all())
+
     open_tasks = _open_tasks(db)
     upcoming = sorted(
         (t for t in open_tasks if t.deadline and today <= t.deadline <= horizon),
@@ -162,6 +171,7 @@ def build_today(db: Session, today: date | None = None) -> dict:
         "day": today,
         "focus_system": focus_system,
         "focus_tasks": focus_tasks,
+        "focus_subtasks": focus_subtasks,
         "upcoming_deadlines": upcoming,
         "flagged": flagged,
     }

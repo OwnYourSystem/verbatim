@@ -103,6 +103,7 @@ export interface TodayView {
   day: string;
   focus_system: System | null;
   focus_tasks: Task[];
+  focus_subtasks: Subtask[];
   upcoming_deadlines: Task[];
   flagged: Task[];
 }
