@@ -142,14 +142,31 @@ def build_today(db: Session, today: date | None = None) -> dict:
     focus_tasks = choose_focus_tasks(db)
     focus_system = db.get(System, focus_tasks[0].system_id) if focus_tasks else None
 
-    focus_task_ids = {t.id for t in focus_tasks}
-    focus_subtasks: list = []
-    if focus_task_ids:
-        stmt = select(Subtask).where(
-            Subtask.task_id.in_(focus_task_ids),
+    # Find best-priority open subtasks across all active systems independently.
+    # Their parent task is always included in focus_tasks (as context), even if
+    # the parent task itself is not at the best task-priority level.
+    stmt_all_subs = (
+        select(Subtask)
+        .join(Subtask.task)
+        .join(Task.system)
+        .where(
             Subtask.status.in_([WorkStatus.todo, WorkStatus.in_progress]),
+            System.status == SystemStatus.active,
         )
-        focus_subtasks = list(db.execute(stmt).scalars().all())
+    )
+    all_open_subtasks = list(db.execute(stmt_all_subs).scalars().all())
+
+    focus_subtasks: list = []
+    if all_open_subtasks:
+        best_sub_priority = min(s.priority for s in all_open_subtasks)
+        focus_subtasks = [s for s in all_open_subtasks if s.priority == best_sub_priority]
+
+    # Merge parent tasks of focus subtasks into focus_tasks (deduped, re-sorted).
+    focus_task_ids = {t.id for t in focus_tasks}
+    extra_parent_ids = {s.task_id for s in focus_subtasks} - focus_task_ids
+    if extra_parent_ids:
+        extra_parents = [db.get(Task, tid) for tid in extra_parent_ids if db.get(Task, tid)]
+        focus_tasks = sorted(focus_tasks + extra_parents, key=_priority_sort_key)
 
     open_tasks = _open_tasks(db)
     upcoming = sorted(
