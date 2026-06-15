@@ -104,6 +104,7 @@ export function Systems() {
       <div className="space-y-4">
         {systems.map((s) => (
           <Card key={s.id}>
+            {/* Row 1: icon + name */}
             <div className="flex items-center gap-3">
               <IconPicker
                 value={s.icon ?? suggestIcon(s.name)}
@@ -112,10 +113,9 @@ export function Systems() {
                 }}
               />
               {editingNameId === s.id ? (
-                <div className="flex items-center gap-1.5 flex-1">
-                  <span className="text-slate-500 mr-1.5">{openId === s.id ? "▾" : "▸"}</span>
+                <div className="flex items-center gap-1.5 flex-1 min-w-0">
                   <input
-                    className="input-base flex-1 !py-1 font-semibold"
+                    className="input-base flex-1 !py-1 font-semibold min-w-0"
                     value={editingNameValue}
                     autoFocus
                     onChange={(e) => setEditingNameValue(e.target.value)}
@@ -130,7 +130,7 @@ export function Systems() {
                     }}
                   />
                   <button
-                    className="btn-secondary !px-2 !py-1 !text-xs"
+                    className="btn-secondary !px-2 !py-1 !text-xs shrink-0"
                     onClick={async () => {
                       const trimmed = editingNameValue.trim();
                       if (trimmed) { await api.updateSystem(s.id, { name: trimmed }); load(); }
@@ -139,18 +139,13 @@ export function Systems() {
                   >
                     Save
                   </button>
-                  <button
-                    className="btn-ghost-danger !px-2 !py-1"
-                    onClick={() => setEditingNameId(null)}
-                  >
-                    ✕
-                  </button>
+                  <button className="btn-ghost-danger !px-2 !py-1 shrink-0" onClick={() => setEditingNameId(null)}>✕</button>
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 flex-1 min-w-0">
                   <button
                     onClick={() => setOpenId(openId === s.id ? null : s.id)}
-                    className="font-semibold flex-1 text-left transition-colors hover:text-emerald-300 min-w-0"
+                    className="font-semibold flex-1 text-left transition-colors hover:text-emerald-300 min-w-0 truncate"
                   >
                     <span className="text-slate-500 mr-1.5">{openId === s.id ? "▾" : "▸"}</span>
                     {s.name}
@@ -164,28 +159,28 @@ export function Systems() {
                   </button>
                 </div>
               )}
-              <label className="text-xs text-slate-400">monthly priority</label>
+            </div>
+            {/* Row 2: controls — wraps naturally on mobile */}
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <label className="text-xs text-slate-400 shrink-0">monthly priority</label>
               <input
                 type="number"
                 min={1}
                 max={100}
                 defaultValue={s.current_priority ?? ""}
                 onBlur={(e) => e.target.value && setPriority(s, Number(e.target.value))}
-                className="input-base w-16 !py-1"
+                className="input-base w-16 !py-1 shrink-0"
               />
               <button
                 onClick={() => rebalance(s)}
-                className="btn-accent !px-3 !py-1.5 !text-xs"
+                className="btn-accent !px-3 !py-1.5 !text-xs shrink-0"
                 title="Ask the AI scrum master to review and plan this system"
               >
                 Scrum review
               </button>
               <button
-                onClick={async () => {
-                  await api.deleteSystem(s.id);
-                  load();
-                }}
-                className="btn-ghost-danger"
+                onClick={async () => { await api.deleteSystem(s.id); load(); }}
+                className="btn-ghost-danger shrink-0"
               >
                 delete
               </button>
