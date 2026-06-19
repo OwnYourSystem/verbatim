@@ -22,23 +22,24 @@ class LoginRequest(BaseModel):
 def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
     """Exchange username + password for a JWT.
 
-    Checks the users table first; falls back to PASSWORD_HASH env var for
-    the 'owner' account (backward compatibility with single-user deployments).
+    For 'owner' account: always checks PASSWORD_HASH env var first.
+    For other users: checks the users table.
     """
     settings = get_settings()
     authenticated = False
 
-    # Check DB users table first
-    user: User | None = db.query(User).filter(
-        User.username == body.username,
-        User.is_active == True,  # noqa: E712
-    ).first()
-
-    if user:
-        authenticated = verify_password(body.password, user.password_hash)
-    elif body.username == "owner" and settings.password_hash:
-        # Legacy fallback: owner account stored as env var
-        authenticated = verify_password(body.password, settings.password_hash)
+    # Owner account: always use PASSWORD_HASH env var (single-user deployment)
+    if body.username == "owner":
+        if settings.password_hash:
+            authenticated = verify_password(body.password, settings.password_hash)
+    else:
+        # Other users: check DB users table
+        user: User | None = db.query(User).filter(
+            User.username == body.username,
+            User.is_active == True,  # noqa: E712
+        ).first()
+        if user:
+            authenticated = verify_password(body.password, user.password_hash)
 
     if not authenticated:
         raise HTTPException(
