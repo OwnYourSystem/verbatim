@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.models import Task
 from app.schemas import SubtaskRead, SystemRead, TaskRead, TodayView
 from app.services import build_today, computed_fields, get_current_priority
 
@@ -20,6 +21,11 @@ def today(db: Session = Depends(get_db)):
         focus_system = SystemRead.model_validate(data["focus_system"])
         focus_system.current_priority = get_current_priority(db, data["focus_system"].id)
 
+    def _task_read(t: Task) -> TaskRead:
+        extra = computed_fields(t)
+        extra["system_name"] = t.system.name if t.system else None
+        return TaskRead.model_validate(t).model_copy(update=extra)
+
     def _subtask_read(st) -> SubtaskRead:
         r = SubtaskRead.model_validate(st)
         for k, v in computed_fields(st).items():
@@ -29,8 +35,8 @@ def today(db: Session = Depends(get_db)):
     return TodayView(
         day=data["day"],
         focus_system=focus_system,
-        focus_tasks=[TaskRead.model_validate(t) for t in data["focus_tasks"]],
+        focus_tasks=[_task_read(t) for t in data["focus_tasks"]],
         focus_subtasks=[_subtask_read(st) for st in data["focus_subtasks"]],
-        upcoming_deadlines=[TaskRead.model_validate(t) for t in data["upcoming_deadlines"]],
-        flagged=[TaskRead.model_validate(t) for t in data["flagged"]],
+        upcoming_deadlines=[_task_read(t) for t in data["upcoming_deadlines"]],
+        flagged=[_task_read(t) for t in data["flagged"]],
     )
