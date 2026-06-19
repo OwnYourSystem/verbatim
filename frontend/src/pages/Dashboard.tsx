@@ -103,8 +103,16 @@ export function Dashboard() {
                 const subtasks = data.focus_subtasks.filter((st: Subtask) => st.task_id === t.id);
                 return (
                   <li key={t.id} className="rounded-xl border border-slate-700 bg-slate-900/60 overflow-hidden">
+                    {/* System label */}
+                    {t.system_name && (
+                      <div className="px-3 pt-2 pb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500/80">
+                          {t.system_name}
+                        </span>
+                      </div>
+                    )}
                     {/* Parent task header */}
-                    <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/60 border-b border-slate-700/60">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/60 border-y border-slate-700/60">
                       <input
                         type="checkbox"
                         checked={selected.has(t.id)}
@@ -119,9 +127,6 @@ export function Dashboard() {
                         {t.title}
                         {t.flagged && <span className="ml-1.5">🚩</span>}
                       </Link>
-                      {t.system_name && (
-                        <span className="text-[10px] text-slate-400 whitespace-nowrap">{t.system_name}</span>
-                      )}
                       {t.deadline && (
                         <span className="text-xs text-slate-400 whitespace-nowrap">{t.deadline}</span>
                       )}
