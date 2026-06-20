@@ -87,7 +87,7 @@ export function Dashboard() {
       <Card title="Today's focus">
         {data.focus_tasks.length > 0 ? (
           <div>
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-5">
               <span
                 className="text-[11px] font-bold px-2 py-0.5 rounded-md"
                 style={{ color: "var(--color-signal-crit)", border: "1px solid var(--color-signal-crit)", background: "rgba(8,12,24,0.6)" }}
@@ -95,72 +95,117 @@ export function Dashboard() {
                 P{Math.min(...data.focus_tasks.map((t) => t.priority))} — highest priority
               </span>
               <span className="text-[11px] text-slate-500">
-                Todo &amp; In Progress across all active systems
+                Pick a card, get it done.
               </span>
             </div>
-            <ul className="space-y-3">
-              {data.focus_tasks.map((t) => {
+            {/* Sticky-note wall */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {data.focus_tasks.map((t, idx) => {
                 const subtasks = data.focus_subtasks.filter((st: Subtask) => st.task_id === t.id);
+                const done = selected.has(t.id);
+                /* Rotate alternates slightly for a pinboard feel */
+                const rotate = ["-rotate-1", "rotate-1", "-rotate-[0.5deg]", "rotate-[0.5deg]"][idx % 4];
+                /* Accent colours cycle through warm sticky-note hues */
+                const accent = [
+                  { bg: "#fef08a", text: "#713f12" },   // yellow
+                  { bg: "#bbf7d0", text: "#14532d" },   // mint
+                  { bg: "#fed7aa", text: "#7c2d12" },   // peach
+                  { bg: "#c7d2fe", text: "#312e81" },   // lavender
+                  { bg: "#fecdd3", text: "#881337" },   // rose
+                ][idx % 5];
+
                 return (
-                  <li key={t.id} className="rounded-xl border border-slate-700 bg-slate-900/60 overflow-hidden">
-                    {/* System label */}
-                    {t.system_name && (
-                      <div className="px-3 pt-2 pb-1">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500/80">
+                  <div
+                    key={t.id}
+                    className={`relative flex flex-col rounded-sm shadow-xl transition-transform duration-200 hover:scale-[1.03] hover:z-10 cursor-default ${rotate} ${done ? "opacity-50" : ""}`}
+                    style={{
+                      background: accent.bg,
+                      boxShadow: "4px 4px 10px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.3)",
+                      minHeight: "160px",
+                    }}
+                  >
+                    {/* Tape strip at top */}
+                    <div
+                      className="absolute -top-3 left-1/2 -translate-x-1/2 w-10 h-6 rounded-sm opacity-60"
+                      style={{ background: "rgba(255,255,255,0.55)", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}
+                    />
+
+                    <div className="p-4 pt-5 flex flex-col gap-2 flex-1">
+                      {/* System badge */}
+                      {t.system_name && (
+                        <span
+                          className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded self-start"
+                          style={{ background: "rgba(0,0,0,0.12)", color: accent.text }}
+                        >
                           {t.system_name}
                         </span>
-                      </div>
-                    )}
-                    {/* Parent task header */}
-                    <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/60 border-y border-slate-700/60">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(t.id)}
-                        onChange={() => toggle(t.id)}
-                        className="h-4 w-4 rounded accent-emerald-500 shrink-0"
-                      />
-                      <PriorityBadge priority={t.priority} />
-                      <Link
-                        to={taskLink(t)}
-                        className={`flex-1 text-sm font-semibold hover:text-emerald-300 transition-colors ${selected.has(t.id) ? "line-through text-slate-500" : "text-white"}`}
-                      >
-                        {t.title}
-                        {t.flagged && <span className="ml-1.5">🚩</span>}
-                      </Link>
-                      {t.deadline && (
-                        <span className="text-xs text-slate-400 whitespace-nowrap">{t.deadline}</span>
                       )}
-                      <StatusBadge status={t.status} />
-                      <Link to={taskLink(t)} className="text-[10px] text-slate-500 hover:text-emerald-400 transition-colors" title="Open in Systems">→</Link>
+
+                      {/* Task title + checkbox */}
+                      <label className="flex items-start gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={done}
+                          onChange={() => toggle(t.id)}
+                          className="mt-0.5 h-4 w-4 rounded shrink-0 accent-emerald-600"
+                        />
+                        <Link
+                          to={taskLink(t)}
+                          className={`text-sm font-bold leading-snug transition-colors hover:underline ${done ? "line-through opacity-50" : ""}`}
+                          style={{ color: accent.text }}
+                        >
+                          {t.title}
+                          {t.flagged && <span className="ml-1 text-red-600">!</span>}
+                        </Link>
+                      </label>
+
+                      {/* Priority + status + deadline row */}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                        <PriorityBadge priority={t.priority} />
+                        <StatusBadge status={t.status} />
+                        {t.deadline && (
+                          <span
+                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                            style={{ background: "rgba(0,0,0,0.1)", color: accent.text }}
+                          >
+                            {t.deadline}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Subtasks */}
+                      {subtasks.length > 0 && (
+                        <ul className="mt-1 space-y-1 border-t pt-2" style={{ borderColor: "rgba(0,0,0,0.1)" }}>
+                          {subtasks.map((st: Subtask) => (
+                            <li key={st.id} className="flex items-start gap-1.5 text-xs" style={{ color: accent.text }}>
+                              <span className="mt-0.5 shrink-0 opacity-60">↳</span>
+                              <Link
+                                to={`/systems?open=${t.system_id}&task=${t.id}`}
+                                className="flex-1 leading-snug hover:underline opacity-80 hover:opacity-100"
+                              >
+                                {st.title}
+                                {st.flagged && <span className="ml-1 text-red-600">!</span>}
+                              </Link>
+                              <StatusBadge status={st.status} />
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
-                    {/* Subtasks under this task */}
-                    {subtasks.length > 0 ? (
-                      <ul className="divide-y divide-slate-800/60">
-                        {subtasks.map((st: Subtask) => (
-                          <li key={st.id} className="flex items-center gap-2 px-3 py-2 pl-8">
-                            <span className="text-emerald-700 shrink-0 text-xs">↳</span>
-                            <Link
-                              to={`/systems?open=${t.system_id}&task=${t.id}`}
-                              className="flex-1 text-sm text-slate-300 hover:text-emerald-300 transition-colors"
-                            >
-                              {st.title}
-                              {st.flagged && <span className="ml-1">🚩</span>}
-                            </Link>
-                            {st.deadline && (
-                              <span className="text-xs text-slate-400 whitespace-nowrap">{st.deadline}</span>
-                            )}
-                            <StatusBadge status={st.status} />
-                            <Link to={`/systems?open=${t.system_id}&task=${t.id}`} className="text-[10px] text-slate-500 hover:text-emerald-400 transition-colors">→</Link>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <div className="px-3 py-2 pl-8 text-xs text-slate-500 italic">No open subtasks</div>
-                    )}
-                  </li>
+
+                    {/* Bottom-right open link */}
+                    <Link
+                      to={taskLink(t)}
+                      className="self-end px-3 pb-2 text-[10px] opacity-40 hover:opacity-80 transition-opacity"
+                      style={{ color: accent.text }}
+                      title="Open in Systems"
+                    >
+                      open →
+                    </Link>
+                  </div>
                 );
               })}
-            </ul>
+            </div>
           </div>
         ) : (
           <Empty>
