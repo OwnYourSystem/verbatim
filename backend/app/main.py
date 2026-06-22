@@ -1,6 +1,8 @@
 """MindAnchor backend entry point."""
 from __future__ import annotations
 
+import logging
+
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -22,7 +24,21 @@ from app.api import auth as auth_router
 from app.auth import get_current_user
 from app.core.config import get_settings
 
+
+def _run_migrations() -> None:
+    """Apply any pending Alembic migrations on startup, then no-op on subsequent runs."""
+    try:
+        from alembic import command
+        from alembic.config import Config
+
+        cfg = Config("alembic.ini")
+        command.upgrade(cfg, "head")
+    except Exception as exc:  # noqa: BLE001
+        logging.getLogger(__name__).warning("Migration skipped: %s", exc)
+
+
 settings = get_settings()
+_run_migrations()
 
 app = FastAPI(
     title=settings.app_name,
