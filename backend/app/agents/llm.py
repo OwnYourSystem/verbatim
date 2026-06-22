@@ -235,3 +235,75 @@ def get_llm() -> LLMClient:
     if settings.anthropic_api_key:
         return AnthropicLLM(settings.anthropic_api_key, settings.model_planning)
     return StubLLM()
+
+
+# ── SK suggestion (separate from the rebalance proposal flow) ─────────────────
+
+_HOT_KEYWORDS = {
+    "sap", "proprietary", "enterprise", "bespoke", "custom", "rare",
+    "advanced", "expert", "ai", "machine learning", "ml", "negotiation",
+    "cloud", "architecture", "strategy", "leadership", "patent",
+}
+_COLD_KEYWORDS = {
+    "excel", "word", "basic", "standard", "common", "email", "documentation",
+    "report", "meeting", "general", "introduction", "overview",
+}
+
+
+def _stub_suggest_sk(title: str, description: str) -> dict:
+    text = (title + " " + description).lower()
+    temperature = 5
+    for kw in _HOT_KEYWORDS:
+        if kw in text:
+            temperature = 8
+            break
+    for kw in _COLD_KEYWORDS:
+        if kw in text:
+            temperature = 3
+            break
+    words = [w for w in title.split() if len(w) > 3][:4]
+    name = " ".join(words).title() if words else title[:30].title()
+    return {
+        "name": name,
+        "temperature": temperature,
+        "justification": (
+            "Estimated based on task domain keywords. "
+            "Hot skills are rare and not easily replicated; cold skills are teachable."
+        ),
+    }
+
+
+def _anthropic_suggest_sk(title: str, description: str, api_key: str, model: str) -> dict:
+    import anthropic  # lazy import
+
+    client = anthropic.Anthropic(api_key=api_key)
+    prompt = (
+        f"Task title: {title}\n"
+        f"Description: {description or '(none)'}\n\n"
+        "Identify the ONE most valuable specific knowledge earned by completing this task.\n"
+        "Rules:\n"
+        "- Name it in 2-5 words (e.g. 'SAP BTP Architecture', 'Contract Negotiation')\n"
+        "- Temperature 1-10: 1=cold (textbook/teachable), 10=blazing hot (unique/premium)\n"
+        "- One-sentence justification\n"
+        'Return ONLY valid JSON: {"name":"...","temperature":<int>,"justification":"..."}'
+    )
+    msg = client.messages.create(
+        model=model,
+        max_tokens=200,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    raw = msg.content[0].text.strip()
+    return _extract_json(raw)
+
+
+def suggest_sk(title: str, description: str) -> dict:
+    """Suggest an SK name + temperature. Auto-selects stub vs real Claude."""
+    settings = get_settings()
+    if settings.anthropic_api_key:
+        try:
+            return _anthropic_suggest_sk(
+                title, description, settings.anthropic_api_key, settings.model_fast
+            )
+        except Exception:
+            pass
+    return _stub_suggest_sk(title, description)

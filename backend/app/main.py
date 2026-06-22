@@ -10,8 +10,10 @@ from app.api import (
     checkins,
     dashboard,
     intake,
+    reading,
     rebalance,
     reports,
+    specific_knowledges,
     systems,
     tasks,
 )
@@ -49,6 +51,8 @@ app.include_router(checkins.router, dependencies=_auth)
 app.include_router(rebalance.router, dependencies=_auth)
 app.include_router(intake.router, dependencies=_auth)
 app.include_router(reports.router, dependencies=_auth)
+app.include_router(specific_knowledges.router, dependencies=_auth)
+app.include_router(reading.router, dependencies=_auth)
 
 
 @app.get("/", tags=["meta"])

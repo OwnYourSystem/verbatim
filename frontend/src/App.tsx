@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { clearToken, getToken } from "./api";
 import { Login } from "./pages/Login";
 
@@ -10,6 +10,9 @@ const NAV = [
   { to: "/proposals", label: "Proposals", icon: "🤖" },
   { to: "/intake", label: "New system", icon: "✨" },
   { to: "/reports", label: "Reports", icon: "📊" },
+  { to: "/knowledge-pool", label: "Knowledge Pool", icon: "🌡️" },
+  { to: "/sk-universe", label: "SK Universe", icon: "🪐" },
+  { to: "/checkout-asap", label: "Check Out ASAP", icon: "📌" },
 ];
 
 const sideLink = ({ isActive }: { isActive: boolean }) =>
@@ -58,6 +61,8 @@ function SignOutButton() {
 
 export function App() {
   const [authed, setAuthed] = useState(() => Boolean(getToken()));
+  const location = useLocation();
+  const isFullBleed = location.pathname === "/sk-universe";
 
   if (!authed) {
     return <Login onSuccess={() => setAuthed(true)} />;
@@ -104,7 +109,7 @@ export function App() {
         </nav>
       </header>
 
-      <main className="relative z-10 flex-1 w-full max-w-4xl mx-auto px-4 md:px-8 py-6 md:py-10 pb-[env(safe-area-inset-bottom,1rem)]">
+      <main className={`relative z-10 flex-1 w-full ${isFullBleed ? "overflow-hidden p-0" : "max-w-4xl mx-auto px-4 md:px-8 py-6 md:py-10 pb-[env(safe-area-inset-bottom,1rem)]"}`}>
         <Outlet />
       </main>
     </div>

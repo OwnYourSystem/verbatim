@@ -234,3 +234,29 @@ export interface Report {
   sections: ReportSection[];
   charts: Chart[];
 }
+
+export interface SpecificKnowledge {
+  id: number;
+  name: string;
+  temperature: number;
+  ai_justification: string | null;
+  in_universe: boolean;
+  completed_count: number;
+  task_count: number;
+}
+
+export interface SKSuggestResponse {
+  name: string;
+  temperature: number;
+  justification: string;
+}
+
+export interface ReadingItem {
+  id: number;
+  title: string;
+  url: string | null;
+  description: string | null;
+  is_checked: boolean;
+  checked_at: string | null;
+  created_at: string;
+}

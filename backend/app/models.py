@@ -88,6 +88,7 @@ class WorkItemMixin:
     # is derived in services.build_today; this column is the manual counterpart.
     flagged: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    sk_ids: Mapped[list[int]] = mapped_column(JSON, default=list, nullable=False)
 
 
 class System(TimestampMixin, Base):
@@ -290,3 +291,27 @@ class RebalanceProposal(TimestampMixin, Base):
         Enum(ProposalStatus), default=ProposalStatus.pending, nullable=False
     )
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class SpecificKnowledge(TimestampMixin, Base):
+    """A named skill/knowledge item with a rarity temperature (1=cold/teachable, 10=hot/unique)."""
+
+    __tablename__ = "specific_knowledges"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False, unique=True)
+    temperature: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    ai_justification: Mapped[str | None] = mapped_column(Text)
+
+
+class ReadingItem(TimestampMixin, Base):
+    """A link or title saved to review later (Check Out ASAP)."""
+
+    __tablename__ = "reading_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    url: Mapped[str | None] = mapped_column(String(1000))
+    description: Mapped[str | None] = mapped_column(Text)
+    is_checked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

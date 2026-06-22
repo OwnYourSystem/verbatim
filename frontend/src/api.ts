@@ -5,8 +5,11 @@ import type {
   IntakeProposal,
   IntakeStep,
   ProposalStatus,
+  ReadingItem,
   RebalanceProposal,
   Report,
+  SKSuggestResponse,
+  SpecificKnowledge,
   Subtask,
   System,
   SystemStatus,
@@ -172,4 +175,28 @@ export const api = {
   // Reports
   report: (kind: "weekly" | "monthly" | "on-demand" | "morning-briefing") =>
     request<Report>(`/reports/${kind}`),
+
+  // Specific Knowledge
+  listSKs: () => request<SpecificKnowledge[]>("/specific-knowledges"),
+  createSK: (body: { name: string; temperature: number; ai_justification?: string }) =>
+    request<SpecificKnowledge>("/specific-knowledges", { method: "POST", body: JSON.stringify(body) }),
+  updateSK: (id: number, body: { name?: string; temperature?: number }) =>
+    request<SpecificKnowledge>(`/specific-knowledges/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteSK: (id: number) =>
+    request<void>(`/specific-knowledges/${id}`, { method: "DELETE" }),
+  suggestSK: (title: string, description: string) =>
+    request<SKSuggestResponse>("/specific-knowledges/suggest", {
+      method: "POST",
+      body: JSON.stringify({ title, description }),
+    }),
+
+  // Reading Items (Check Out ASAP)
+  listReadingItems: (archived = false) =>
+    request<ReadingItem[]>(`/reading-items?archived=${archived}`),
+  createReadingItem: (body: { title: string; url?: string; description?: string }) =>
+    request<ReadingItem>("/reading-items", { method: "POST", body: JSON.stringify(body) }),
+  checkReadingItem: (id: number) =>
+    request<ReadingItem>(`/reading-items/${id}`, { method: "PATCH", body: JSON.stringify({ is_checked: true }) }),
+  deleteReadingItem: (id: number) =>
+    request<void>(`/reading-items/${id}`, { method: "DELETE" }),
 };

@@ -8,6 +8,9 @@ import { Calendar } from "./pages/Calendar";
 import { Proposals } from "./pages/Proposals";
 import { Intake } from "./pages/Intake";
 import { Reports } from "./pages/Reports";
+import { KnowledgePool } from "./pages/KnowledgePool";
+import { SKUniverse } from "./pages/SKUniverse";
+import { CheckOutASAP } from "./pages/CheckOutASAP";
 import "./index.css";
 
 const router = createBrowserRouter([
@@ -21,6 +24,9 @@ const router = createBrowserRouter([
       { path: "proposals", element: <Proposals /> },
       { path: "intake", element: <Intake /> },
       { path: "reports", element: <Reports /> },
+      { path: "knowledge-pool", element: <KnowledgePool /> },
+      { path: "sk-universe", element: <SKUniverse /> },
+      { path: "checkout-asap", element: <CheckOutASAP /> },
     ],
   },
 ]);

@@ -78,6 +78,7 @@ class WorkItemBase(BaseModel):
     required_demo: bool = False
     flagged: bool = False  # user-raised "needs attention" flag
     position: int = 0
+    sk_ids: list[int] = Field(default_factory=list)
 
 
 class WorkItemUpdate(BaseModel):
@@ -94,6 +95,7 @@ class WorkItemUpdate(BaseModel):
     required_demo: bool | None = None
     flagged: bool | None = None
     position: int | None = None
+    sk_ids: list[int] | None = None
 
 
 class _Computed(BaseModel):
@@ -442,3 +444,61 @@ class TodayView(BaseModel):
     focus_subtasks: list[SubtaskRead] = []
     upcoming_deadlines: list[TaskRead]
     flagged: list[TaskRead]
+
+
+# ---- Specific Knowledge ----
+class SKCreate(BaseModel):
+    name: str
+    temperature: int = Field(ge=1, le=10, default=5)
+    ai_justification: str | None = None
+
+
+class SKUpdate(BaseModel):
+    name: str | None = None
+    temperature: int | None = Field(default=None, ge=1, le=10)
+    ai_justification: str | None = None
+
+
+class SKRead(_ORM):
+    id: int
+    name: str
+    temperature: int
+    ai_justification: str | None = None
+    in_universe: bool = False
+    completed_count: int = 0
+    task_count: int = 0
+
+
+class SKSuggestRequest(BaseModel):
+    title: str
+    description: str | None = None
+
+
+class SKSuggestResponse(BaseModel):
+    name: str
+    temperature: int
+    justification: str
+
+
+# ---- Reading Items (Check Out ASAP) ----
+class ReadingItemCreate(BaseModel):
+    title: str
+    url: str | None = None
+    description: str | None = None
+
+
+class ReadingItemUpdate(BaseModel):
+    title: str | None = None
+    url: str | None = None
+    description: str | None = None
+    is_checked: bool | None = None
+
+
+class ReadingItemRead(_ORM):
+    id: int
+    title: str
+    url: str | None = None
+    description: str | None = None
+    is_checked: bool
+    checked_at: datetime | None = None
+    created_at: datetime
