@@ -315,3 +315,61 @@ class ReadingItem(TimestampMixin, Base):
     description: Mapped[str | None] = mapped_column(Text)
     is_checked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PainArea(enum.StrEnum):
+    data_engineering = "data_engineering"
+    ml = "ml"
+    ai = "ai"
+
+
+class MonetizationModel(enum.StrEnum):
+    saas = "saas"
+    api_product = "api_product"
+    consulting = "consulting"
+    course = "course"
+    open_source_premium = "open_source_premium"
+    marketplace = "marketplace"
+
+
+class ProjectPhase(enum.StrEnum):
+    idea = "idea"
+    validate = "validate"
+    build = "build"
+    launch = "launch"
+
+
+class Pain(TimestampMixin, Base):
+    __tablename__ = "pains"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    source_url: Mapped[str | None] = mapped_column(String(1000))
+    source_platform: Mapped[str | None] = mapped_column(String(100))
+    area: Mapped[str] = mapped_column(String(50), nullable=False, default="ai")
+    is_ai_fetched: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    project: Mapped[PainProject | None] = relationship(
+        back_populates="pain", cascade="all, delete-orphan", uselist=False
+    )
+
+
+class PainProject(TimestampMixin, Base):
+    __tablename__ = "pain_projects"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    pain_id: Mapped[int] = mapped_column(
+        ForeignKey("pains.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    name: Mapped[str] = mapped_column(String(300), nullable=False)
+    problem_statement: Mapped[str | None] = mapped_column(Text)
+    target_audience: Mapped[str | None] = mapped_column(Text)
+    monetization_model: Mapped[str | None] = mapped_column(String(50))
+    phase: Mapped[str] = mapped_column(String(20), nullable=False, default="idea")
+    system_id: Mapped[int | None] = mapped_column(
+        ForeignKey("systems.id", ondelete="SET NULL")
+    )
+
+    pain: Mapped[Pain] = relationship(back_populates="project")
+    system: Mapped[System | None] = relationship()

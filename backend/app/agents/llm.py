@@ -307,3 +307,233 @@ def suggest_sk(title: str, description: str) -> dict:
         except Exception:
             pass
     return _stub_suggest_sk(title, description)
+
+
+# ── Wall of Pains ─────────────────────────────────────────────────────────────
+
+_STUB_PAINS = [
+    {
+        "title": "Real-time data quality monitoring at pipeline scale",
+        "description": (
+            "Teams running high-volume Kafka/Flink pipelines can't detect schema drift, "
+            "null explosions, or distribution shifts in real time without halting the pipeline. "
+            "Existing tools (Great Expectations, Soda) are batch-first and add 30-60 min latency."
+        ),
+        "source_url": "https://seattledataguy.substack.com",
+        "source_platform": "Substack",
+        "area": "data_engineering",
+    },
+    {
+        "title": "Vector DB cost explosion at enterprise scale",
+        "description": (
+            "Pinecone, Weaviate, and Qdrant bills become unpredictable past 10M vectors. "
+            "Self-hosting cuts cost but the operational burden is prohibitive. "
+            "Teams need a managed hybrid sparse-dense index with predictable pricing."
+        ),
+        "source_url": "https://thedataengineering.substack.com",
+        "source_platform": "Substack",
+        "area": "data_engineering",
+    },
+    {
+        "title": "dbt model contract testing across team boundaries",
+        "description": (
+            "Multiple squads own hundreds of dbt models; cross-team schema changes break "
+            "downstream consumers silently. No lightweight contract-testing layer exists "
+            "between dbt producers and their consumers."
+        ),
+        "source_url": "https://roundup.getdbt.com",
+        "source_platform": "Substack",
+        "area": "data_engineering",
+    },
+    {
+        "title": "LLM hallucination guardrails for enterprise RAG",
+        "description": (
+            "RAG pipelines return confident but wrong answers when retrieved chunks "
+            "are irrelevant. Ground-truth evaluation at scale is expensive and "
+            "existing guardrails are too slow or costly for SMB deployments."
+        ),
+        "source_url": "https://www.latent.space",
+        "source_platform": "Substack",
+        "area": "ai",
+    },
+    {
+        "title": "AI agent reliability in multi-step production workflows",
+        "description": (
+            "Autonomous agents built on function-calling LLMs fail silently mid-chain, "
+            "produce partial outputs, and lack restart-from-checkpoint. "
+            "Failure modes are opaque and hard to debug in production."
+        ),
+        "source_url": "https://www.agentrecap.com",
+        "source_platform": "Substack",
+        "area": "ai",
+    },
+    {
+        "title": "Prompt version control and regression testing at scale",
+        "description": (
+            "Each data scientist maintains their own prompt library in different formats. "
+            "No version control, no regression testing, no A/B framework. "
+            "Prompt drift degrades production models invisibly over months."
+        ),
+        "source_url": "https://eugeneyan.com",
+        "source_platform": "Blog",
+        "area": "ai",
+    },
+    {
+        "title": "AI governance and audit trails for regulated industries",
+        "description": (
+            "Banks and insurers need explainability, audit trails, and data residency. "
+            "Existing LLM APIs don't provide the attestation that GDPR, SR 11-7, "
+            "and the EU AI Act require from compliance teams."
+        ),
+        "source_url": "https://thesequence.substack.com",
+        "source_platform": "Substack",
+        "area": "ai",
+    },
+    {
+        "title": "ML model drift detection without retraining overhead",
+        "description": (
+            "Statistical drift tests create false positives on benign shifts, "
+            "causing teams to retrain unnecessarily. "
+            "A causal drift detector tuned per-feature would cut retraining by 60-70%."
+        ),
+        "source_url": "https://mlops.community",
+        "source_platform": "Community",
+        "area": "ml",
+    },
+    {
+        "title": "Reproducible ML experiments across heterogeneous environments",
+        "description": (
+            "GPU cluster + local Mac + cloud notebook = three diverging environments. "
+            "Seeds aren't set consistently; results differ between researchers "
+            "and can't be audited for compliance or publication."
+        ),
+        "source_url": "https://newsletter.practicalai.io",
+        "source_platform": "Substack",
+        "area": "ml",
+    },
+    {
+        "title": "Affordable fine-tuning pipeline for domain-specific LLMs",
+        "description": (
+            "Full fine-tuning of 7B+ models costs thousands per run. "
+            "LoRA reduces cost but introduces adapter management complexity. "
+            "Teams need a managed pipeline with cost ceilings and automatic evaluation."
+        ),
+        "source_url": "https://www.interconnects.ai",
+        "source_platform": "Substack",
+        "area": "ml",
+    },
+]
+
+
+def discover_pains(area: str = "all") -> list[dict]:
+    """Return pains for the Wall of Pains. Stub returns curated real pains."""
+    settings = get_settings()
+    if settings.anthropic_api_key:
+        try:
+            return _anthropic_discover_pains(area, settings.anthropic_api_key, settings.model_fast)
+        except Exception:
+            pass
+    pains = _STUB_PAINS
+    if area and area != "all":
+        pains = [p for p in pains if p["area"] == area]
+    return pains
+
+
+def _anthropic_discover_pains(area: str, api_key: str, model: str) -> list[dict]:
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=api_key)
+    area_filter = (
+        "" if area == "all" else f" Focus only on {area.replace('_', ' ')}."
+    )
+    prompt = (
+        "List 8 real, current (2025-2026) painful unsolved problems in "
+        f"Data Engineering, ML, and AI that practitioners face.{area_filter}\n"
+        "For each: title (max 80 chars), description (2-3 sentences on why it "
+        "hurts and what is missing), source_url (real Substack/blog/community URL), "
+        "source_platform (Substack|Blog|Reddit|LinkedIn|Community), "
+        "area (data_engineering|ml|ai).\n"
+        'Return ONLY a JSON array: [{"title":"...","description":"...",'
+        '"source_url":"...","source_platform":"...","area":"..."}]'
+    )
+    msg = client.messages.create(
+        model=model,
+        max_tokens=1800,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    raw = msg.content[0].text.strip()
+    data = _extract_json(raw)
+    return data if isinstance(data, list) else data.get("pains", [])
+
+
+def assist_project(title: str, description: str) -> dict:
+    """Generate a monetization project brief from a pain."""
+    settings = get_settings()
+    if settings.anthropic_api_key:
+        try:
+            return _anthropic_assist_project(
+                title, description, settings.anthropic_api_key, settings.model_fast
+            )
+        except Exception:
+            pass
+    return _stub_assist_project(title, description)
+
+
+def _stub_assist_project(title: str, description: str) -> dict:
+    w = (title + " " + (description or "")).lower()
+    if any(k in w for k in ("monitor", "quality", "observ")):
+        mono = "saas"
+        audience = "Data engineering teams at mid-to-large companies using Kafka or Flink"
+    elif any(k in w for k in ("cost", "budget", "expensive", "price")):
+        mono = "open_source_premium"
+        audience = "Startups and scale-ups with growing data infrastructure bills"
+    elif any(k in w for k in ("agent", "llm", "hallucin", "rag")):
+        mono = "api_product"
+        audience = "Software teams integrating AI/LLMs into customer-facing products"
+    elif any(k in w for k in ("compliance", "governance", "audit", "regulat")):
+        mono = "consulting"
+        audience = "Regulated-industry companies (finance, insurance, healthcare)"
+    elif any(k in w for k in ("fine-tun", "train", "experiment", "repro")):
+        mono = "saas"
+        audience = "ML engineers at companies with active model training programs"
+    else:
+        mono = "saas"
+        audience = "Data and ML practitioners at technology companies"
+    return {
+        "name": " ".join(title.split()[:5]),
+        "problem_statement": (
+            description or f"Practitioners face {title.lower()} with no reliable tooling available."
+        ),
+        "target_audience": audience,
+        "monetization_model": mono,
+        "justification": (
+            "Niche B2B problem + clear buyer persona + recurring need = "
+            "strong product-market fit for a focused SaaS or API offering."
+        ),
+    }
+
+
+def _anthropic_assist_project(
+    title: str, description: str, api_key: str, model: str
+) -> dict:
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=api_key)
+    prompt = (
+        f"Pain: {title}\nContext: {description}\n\n"
+        "You are an AI product strategist. Define a project to solve this pain and monetize it:\n"
+        "- name: product/project name (2-5 words)\n"
+        "- problem_statement: 2-sentence crisp problem + who suffers\n"
+        "- target_audience: specific buyer persona (role, company size, industry)\n"
+        "- monetization_model: one of "
+        "saas|api_product|consulting|course|open_source_premium|marketplace\n"
+        "- justification: 1-sentence why this model fits\n"
+        'Return ONLY JSON: {"name":"...","problem_statement":"...",'
+        '"target_audience":"...","monetization_model":"...","justification":"..."}'
+    )
+    msg = client.messages.create(
+        model=model,
+        max_tokens=400,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return _extract_json(msg.content[0].text.strip())

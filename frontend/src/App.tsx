@@ -13,6 +13,7 @@ const NAV = [
   { to: "/knowledge-pool", label: "Knowledge Pool", icon: "🌡️" },
   { to: "/sk-universe", label: "SK Universe", icon: "🪐" },
   { to: "/checkout-asap", label: "Check Out ASAP", icon: "📌" },
+  { to: "/wall-of-pains", label: "Wall of Pains", icon: "🩹" },
 ];
 
 const sideLink = ({ isActive }: { isActive: boolean }) =>

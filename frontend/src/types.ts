@@ -260,3 +260,53 @@ export interface ReadingItem {
   checked_at: string | null;
   created_at: string;
 }
+
+export type PainArea = "data_engineering" | "ml" | "ai";
+export type MonetizationModel =
+  | "saas"
+  | "api_product"
+  | "consulting"
+  | "course"
+  | "open_source_premium"
+  | "marketplace";
+export type ProjectPhase = "idea" | "validate" | "build" | "launch";
+
+export interface PainProject {
+  id: number;
+  pain_id: number;
+  name: string;
+  problem_statement: string | null;
+  target_audience: string | null;
+  monetization_model: MonetizationModel | null;
+  phase: ProjectPhase;
+  system_id: number | null;
+  system_name: string | null;
+}
+
+export interface Pain {
+  id: number;
+  title: string;
+  description: string | null;
+  source_url: string | null;
+  source_platform: string | null;
+  area: PainArea;
+  is_ai_fetched: boolean;
+  created_at: string;
+  project: PainProject | null;
+}
+
+export interface PainDiscoveryItem {
+  title: string;
+  description: string;
+  source_url: string | null;
+  source_platform: string | null;
+  area: PainArea;
+}
+
+export interface AIProjectAssist {
+  name: string;
+  problem_statement: string;
+  target_audience: string;
+  monetization_model: MonetizationModel;
+  justification: string;
+}

@@ -11,6 +11,7 @@ import { Reports } from "./pages/Reports";
 import { KnowledgePool } from "./pages/KnowledgePool";
 import { SKUniverse } from "./pages/SKUniverse";
 import { CheckOutASAP } from "./pages/CheckOutASAP";
+import { WallOfPains } from "./pages/WallOfPains";
 import "./index.css";
 
 const router = createBrowserRouter([
@@ -27,6 +28,7 @@ const router = createBrowserRouter([
       { path: "knowledge-pool", element: <KnowledgePool /> },
       { path: "sk-universe", element: <SKUniverse /> },
       { path: "checkout-asap", element: <CheckOutASAP /> },
+      { path: "wall-of-pains", element: <WallOfPains /> },
     ],
   },
 ]);

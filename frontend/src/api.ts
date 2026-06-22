@@ -1,9 +1,12 @@
 import type {
+  AIProjectAssist,
   CheckIn,
   FocusBlock,
   IntakeAnswer,
   IntakeProposal,
   IntakeStep,
+  Pain,
+  PainDiscoveryItem,
   ProposalStatus,
   ReadingItem,
   RebalanceProposal,
@@ -189,6 +192,24 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ title, description }),
     }),
+
+  // Wall of Pains
+  listPains: (area?: string) =>
+    request<Pain[]>(`/pains${area && area !== "all" ? `?area=${area}` : ""}`),
+  createPain: (body: Partial<Pain & { is_ai_fetched: boolean }>) =>
+    request<Pain>("/pains", { method: "POST", body: JSON.stringify(body) }),
+  deletePain: (id: number) =>
+    request<void>(`/pains/${id}`, { method: "DELETE" }),
+  discoverPains: (area = "all") =>
+    request<PainDiscoveryItem[]>(`/pains/discover?area=${area}`, { method: "POST" }),
+  createProject: (painId: number, body: object) =>
+    request<Pain>(`/pains/${painId}/project`, { method: "POST", body: JSON.stringify(body) }),
+  updateProject: (painId: number, body: object) =>
+    request<Pain>(`/pains/${painId}/project`, { method: "PATCH", body: JSON.stringify(body) }),
+  assistProject: (painId: number) =>
+    request<AIProjectAssist>(`/pains/${painId}/assist-project`, { method: "POST" }),
+  createSystemFromProject: (painId: number) =>
+    request<Pain>(`/pains/${painId}/create-system`, { method: "POST" }),
 
   // Reading Items (Check Out ASAP)
   listReadingItems: (archived = false) =>

@@ -502,3 +502,69 @@ class ReadingItemRead(_ORM):
     is_checked: bool
     checked_at: datetime | None = None
     created_at: datetime
+
+
+# ---- Wall of Pains ----
+class PainProjectCreate(BaseModel):
+    name: str
+    problem_statement: str | None = None
+    target_audience: str | None = None
+    monetization_model: str | None = None
+    phase: str = "idea"
+
+
+class PainProjectUpdate(BaseModel):
+    name: str | None = None
+    problem_statement: str | None = None
+    target_audience: str | None = None
+    monetization_model: str | None = None
+    phase: str | None = None
+
+
+class PainProjectRead(_ORM):
+    id: int
+    pain_id: int
+    name: str
+    problem_statement: str | None = None
+    target_audience: str | None = None
+    monetization_model: str | None = None
+    phase: str
+    system_id: int | None = None
+    system_name: str | None = None
+
+
+class PainCreate(BaseModel):
+    title: str
+    description: str | None = None
+    source_url: str | None = None
+    source_platform: str | None = None
+    area: str = "ai"
+    is_ai_fetched: bool = False
+
+
+class PainRead(_ORM):
+    id: int
+    title: str
+    description: str | None = None
+    source_url: str | None = None
+    source_platform: str | None = None
+    area: str
+    is_ai_fetched: bool
+    created_at: datetime
+    project: PainProjectRead | None = None
+
+
+class PainDiscoveryItem(BaseModel):
+    title: str
+    description: str
+    source_url: str | None = None
+    source_platform: str | None = None
+    area: str
+
+
+class AIProjectAssist(BaseModel):
+    name: str
+    problem_statement: str
+    target_audience: str
+    monetization_model: str
+    justification: str
