@@ -1,7 +1,8 @@
 """Application configuration, loaded from environment variables.
 
 Copy backend/.env.example to backend/.env and fill in values for local dev.
-In production (Cloud Run) all values are injected as env vars / secrets.
+In production (Render, see render.yaml) all values are injected as env vars;
+DATABASE_URL comes from the managed Postgres add-on.
 """
 from __future__ import annotations
 
@@ -21,10 +22,10 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = False
 
-    # Database — Google Cloud SQL (PostgreSQL) in prod; local Postgres in dev.
-    # Cloud Run: set via Secret Manager secret mounted as DATABASE_URL env var.
-    # Cloud SQL socket path example:
-    #   postgresql+psycopg2://user:pass@/mindanchor?host=/cloudsql/PROJECT:REGION:INSTANCE
+    # Database — Render managed PostgreSQL in prod; local Postgres in dev.
+    # Render injects DATABASE_URL from the add-on with a bare ``postgres://``
+    # scheme; the validator below rewrites it to postgresql+psycopg2:// since
+    # SQLAlchemy 2.x no longer accepts the ``postgres`` alias.
     database_url: str = "postgresql+psycopg2://mindanchor:mindanchor@localhost:5432/mindanchor"
 
     # Auth (single-user JWT)
