@@ -39,8 +39,11 @@ def _run_migrations() -> None:
         ini = os.path.join(os.path.dirname(__file__), "..", "alembic.ini")
         cfg = Config(os.path.abspath(ini))
         command.upgrade(cfg, "head")
-    except Exception as exc:  # noqa: BLE001
-        _log.warning("Migration skipped: %s", exc)
+        _log.info("Database migrations are up to date.")
+    except Exception:
+        # Don't crash the process, but surface the full traceback. A swallowed
+        # one-line warning here previously hid a fatal schema/connection error.
+        _log.exception("Database migration failed — the app may serve 500s")
 
 
 @asynccontextmanager
