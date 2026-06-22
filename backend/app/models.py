@@ -290,3 +290,15 @@ class RebalanceProposal(TimestampMixin, Base):
         Enum(ProposalStatus), default=ProposalStatus.pending, nullable=False
     )
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class TrainConfig(TimestampMixin, Base):
+    """One global train configuration per user (single-user app → single row)."""
+
+    __tablename__ = "train_config"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    wagon_order: Mapped[list[int]] = mapped_column(JSON, default=list, nullable=False)
+    goal_1: Mapped[str | None] = mapped_column(String(500))
+    goal_2: Mapped[str | None] = mapped_column(String(500))
+    goal_3: Mapped[str | None] = mapped_column(String(500))

@@ -8,6 +8,7 @@ import { Calendar } from "./pages/Calendar";
 import { Proposals } from "./pages/Proposals";
 import { Intake } from "./pages/Intake";
 import { Reports } from "./pages/Reports";
+import { MindTrain } from "./pages/MindTrain";
 import "./index.css";
 
 const router = createBrowserRouter([
@@ -21,6 +22,7 @@ const router = createBrowserRouter([
       { path: "proposals", element: <Proposals /> },
       { path: "intake", element: <Intake /> },
       { path: "reports", element: <Reports /> },
+      { path: "mindtrain", element: <MindTrain /> },
     ],
   },
 ]);

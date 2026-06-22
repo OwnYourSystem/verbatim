@@ -442,3 +442,19 @@ class TodayView(BaseModel):
     focus_subtasks: list[SubtaskRead] = []
     upcoming_deadlines: list[TaskRead]
     flagged: list[TaskRead]
+
+
+# ---- Train ----
+class TrainConfigRead(BaseModel):
+    wagon_order: list[int] = []
+    goal_1: str | None = None
+    goal_2: str | None = None
+    goal_3: str | None = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TrainConfigUpdate(BaseModel):
+    wagon_order: list[int] | None = None
+    goal_1: str | None = None
+    goal_2: str | None = None
+    goal_3: str | None = None

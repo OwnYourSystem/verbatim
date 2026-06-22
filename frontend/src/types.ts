@@ -234,3 +234,10 @@ export interface Report {
   sections: ReportSection[];
   charts: Chart[];
 }
+
+export interface TrainConfig {
+  wagon_order: number[];
+  goal_1: string | null;
+  goal_2: string | null;
+  goal_3: string | null;
+}

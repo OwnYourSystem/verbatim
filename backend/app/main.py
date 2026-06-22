@@ -14,6 +14,7 @@ from app.api import (
     reports,
     systems,
     tasks,
+    train,
 )
 from app.api import auth as auth_router
 from app.auth import get_current_user
@@ -49,6 +50,7 @@ app.include_router(checkins.router, dependencies=_auth)
 app.include_router(rebalance.router, dependencies=_auth)
 app.include_router(intake.router, dependencies=_auth)
 app.include_router(reports.router, dependencies=_auth)
+app.include_router(train.router, dependencies=_auth)
 
 
 @app.get("/", tags=["meta"])
