@@ -13,7 +13,6 @@ import type {
   Task,
   TimeLog,
   TodayView,
-  TrainConfig,
   WorkItemInput,
 } from "./types";
 
@@ -173,9 +172,4 @@ export const api = {
   // Reports
   report: (kind: "weekly" | "monthly" | "on-demand" | "morning-briefing") =>
     request<Report>(`/reports/${kind}`),
-
-  // MindTrain
-  getTrainConfig: () => request<TrainConfig>("/train-config"),
-  updateTrainConfig: (body: Partial<TrainConfig> & { wagon_order?: number[] }) =>
-    request<TrainConfig>("/train-config", { method: "PUT", body: JSON.stringify(body) }),
 };
