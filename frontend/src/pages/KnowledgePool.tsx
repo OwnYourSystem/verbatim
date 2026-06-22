@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { SpecificKnowledge } from "../types";
 import { PageHeader } from "../components/ui";
@@ -17,36 +17,88 @@ function tempColor(t: number): string {
   return "#3b82f6";
 }
 
-function Thermometer({ temperature }: { temperature: number }) {
+const TUBE_TOP = 8;
+const TUBE_H = 58;
+
+function Thermometer({
+  temperature,
+  onChange,
+}: {
+  temperature: number;
+  onChange?: (t: number) => void;
+}) {
   const pct = ((temperature - 1) / 9) * 100;
   const color = tempColor(temperature);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const dragging = useRef(false);
+
+  const yToTemp = (clientY: number): number => {
+    const rect = svgRef.current!.getBoundingClientRect();
+    // SVG viewBox maps to actual pixel rect
+    const scaleY = 90 / rect.height;
+    const svgY = (clientY - rect.top) * scaleY;
+    // clamp to tube range
+    const clamped = Math.max(TUBE_TOP, Math.min(TUBE_TOP + TUBE_H, svgY));
+    const fraction = 1 - (clamped - TUBE_TOP) / TUBE_H;
+    return Math.max(1, Math.min(10, Math.round(1 + fraction * 9)));
+  };
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (!onChange) return;
+    e.preventDefault();
+    dragging.current = true;
+    onChange(yToTemp(e.clientY));
+    const move = (ev: MouseEvent) => { if (dragging.current) onChange(yToTemp(ev.clientY)); };
+    const up = () => { dragging.current = false; window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
+
+  const onClick = (e: React.MouseEvent) => {
+    if (!onChange) return;
+    onChange(yToTemp(e.clientY));
+  };
+
+  const gradId = `thermo-g-${temperature}`;
   return (
-    <svg width="28" height="90" viewBox="0 0 28 90" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      ref={svgRef}
+      width="28"
+      height="90"
+      viewBox="0 0 28 90"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ cursor: onChange ? "ns-resize" : "default", userSelect: "none" }}
+      onMouseDown={onMouseDown}
+      onClick={onClick}
+    >
       <defs>
-        <linearGradient id={`thermo${temperature}`} x1="0" y1="1" x2="0" y2="0">
+        <linearGradient id={gradId} x1="0" y1="1" x2="0" y2="0">
           <stop offset="0%" stopColor="#3b82f6" />
           <stop offset="50%" stopColor="#14b8a6" />
           <stop offset="80%" stopColor="#f97316" />
           <stop offset="100%" stopColor="#ef4444" />
         </linearGradient>
-        <clipPath id={`clip${temperature}`}>
-          <rect x="9" y={70 - pct * 0.58} width="10" height={pct * 0.58 + 12} rx="5" />
-        </clipPath>
       </defs>
+      {/* Hit area — invisible, covers full tube so drag works everywhere */}
+      {onChange && <rect x="4" y={TUBE_TOP} width="20" height={TUBE_H} fill="transparent" />}
       {/* Tube outline */}
-      <rect x="9" y="8" width="10" height="62" rx="5" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+      <rect x="9" y={TUBE_TOP} width="10" height={TUBE_H} rx="5" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
       {/* Mercury fill */}
       <rect
-        x="9" y={70 - pct * 0.58} width="10" height={pct * 0.58 + 12} rx="5"
-        fill={`url(#thermo${temperature})`}
-        style={{ transition: "all 0.6s ease" }}
+        x="9"
+        y={TUBE_TOP + TUBE_H - pct * TUBE_H / 100}
+        width="10"
+        height={pct * TUBE_H / 100 + 10}
+        rx="5"
+        fill={`url(#${gradId})`}
+        style={{ transition: dragging.current ? "none" : "all 0.25s ease" }}
       />
       {/* Bulb */}
-      <circle cx="14" cy="76" r="9" fill={color} style={{ transition: "fill 0.6s ease" }} />
+      <circle cx="14" cy="76" r="9" fill={color} style={{ transition: "fill 0.25s ease" }} />
       <circle cx="14" cy="76" r="5" fill="rgba(255,255,255,0.2)" />
       {/* Tick marks */}
       {[0, 25, 50, 75, 100].map((p) => (
-        <line key={p} x1="19" y1={8 + (1 - p / 100) * 60} x2="22" y2={8 + (1 - p / 100) * 60} stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+        <line key={p} x1="19" y1={TUBE_TOP + (1 - p / 100) * TUBE_H} x2="22" y2={TUBE_TOP + (1 - p / 100) * TUBE_H} stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
       ))}
     </svg>
   );
@@ -58,10 +110,12 @@ export function KnowledgePool() {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [newTemp, setNewTemp] = useState(5);
+  // per-card live temperature (before save) and edit-name state
+  const [liveTemps, setLiveTemps] = useState<Record<number, number>>({});
   const [editId, setEditId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
-  const [editTemp, setEditTemp] = useState(5);
   const [error, setError] = useState<string | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = () => api.listSKs().then(setSks).catch((e) => setError(String(e)));
   useEffect(() => { load(); }, []);
@@ -80,8 +134,18 @@ export function KnowledgePool() {
     load();
   };
 
-  const saveEdit = async (id: number) => {
-    await api.updateSK(id, { name: editName, temperature: editTemp });
+  // Called while dragging the thermometer — update local display immediately,
+  // debounce the API call so we don't spam on every pixel.
+  const onThermoChange = (sk: SpecificKnowledge, t: number) => {
+    setLiveTemps((prev) => ({ ...prev, [sk.id]: t }));
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      api.updateSK(sk.id, { temperature: t }).then(load);
+    }, 400);
+  };
+
+  const saveEditName = async (id: number) => {
+    await api.updateSK(id, { name: editName });
     setEditId(null);
     load();
   };
@@ -172,16 +236,21 @@ export function KnowledgePool() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((sk) => {
-            const color = tempColor(sk.temperature);
+            const liveT = liveTemps[sk.id] ?? sk.temperature;
+            const color = tempColor(liveT);
             const isEditing = editId === sk.id;
             return (
               <div
                 key={sk.id}
                 className="rounded-xl border bg-slate-900/70 p-4 flex gap-3 items-start"
-                style={{ borderColor: `${color}33` }}
+                style={{ borderColor: `${color}33`, transition: "border-color 0.25s" }}
               >
-                <div className="shrink-0 mt-1">
-                  <Thermometer temperature={sk.temperature} />
+                {/* Interactive thermometer — drag up/down to set temperature */}
+                <div className="shrink-0 mt-1" title="Drag to set temperature">
+                  <Thermometer
+                    temperature={liveT}
+                    onChange={(t) => onThermoChange(sk, t)}
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   {isEditing ? (
@@ -190,20 +259,11 @@ export function KnowledgePool() {
                         autoFocus
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") saveEditName(sk.id); if (e.key === "Escape") setEditId(null); }}
                         className="input-base w-full text-sm"
                       />
-                      <div>
-                        <span className="text-[10px] text-slate-400">
-                          Temperature: <span style={{ color: tempColor(editTemp) }}>{editTemp}</span>
-                        </span>
-                        <input
-                          type="range" min={1} max={10} value={editTemp}
-                          onChange={(e) => setEditTemp(Number(e.target.value))}
-                          className="w-full accent-emerald-500"
-                        />
-                      </div>
                       <div className="flex gap-2">
-                        <button onClick={() => saveEdit(sk.id)} className="btn-primary text-xs py-1">Save</button>
+                        <button onClick={() => saveEditName(sk.id)} className="btn-primary text-xs py-1">Save</button>
                         <button onClick={() => setEditId(null)} className="text-xs text-slate-500">Cancel</button>
                       </div>
                     </div>
@@ -220,9 +280,9 @@ export function KnowledgePool() {
                       <div className="flex items-center gap-2 mt-1.5">
                         <span
                           className="text-[11px] font-bold px-2 py-0.5 rounded-full"
-                          style={{ color, background: `${color}18`, border: `1px solid ${color}44` }}
+                          style={{ color, background: `${color}18`, border: `1px solid ${color}44`, transition: "all 0.25s" }}
                         >
-                          T{sk.temperature} · {tempLabel(sk.temperature)}
+                          T{liveT} · {tempLabel(liveT)}
                         </span>
                         <span className="text-[10px] text-slate-500">
                           {sk.task_count} task{sk.task_count !== 1 ? "s" : ""}
@@ -236,10 +296,10 @@ export function KnowledgePool() {
                       )}
                       <div className="flex gap-3 mt-2">
                         <button
-                          onClick={() => { setEditId(sk.id); setEditName(sk.name); setEditTemp(sk.temperature); }}
+                          onClick={() => { setEditId(sk.id); setEditName(sk.name); }}
                           className="text-[10px] text-slate-500 hover:text-emerald-400 transition-colors"
                         >
-                          Edit
+                          Rename
                         </button>
                         <button
                           onClick={() => del(sk.id)}
