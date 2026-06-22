@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -41,6 +42,40 @@ class Settings(BaseSettings):
 
     # CORS — comma-separated in env: CORS_ORIGINS=https://mindanchor.vercel.app,https://custom.domain
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _normalize_database_url(cls, v: str) -> str:
+        """Accept the bare ``postgres://`` scheme that managed hosts (Render,
+        Heroku, Railway) emit and rewrite it to the driver-qualified form that
+        SQLAlchemy 2.x requires. SQLAlchemy 2.0 dropped the ``postgres`` alias,
+        so leaving it unrewritten raises NoSuchModuleError on every request.
+        """
+        if isinstance(v, str):
+            if v.startswith("postgres://"):
+                return "postgresql+psycopg2://" + v[len("postgres://"):]
+            if v.startswith("postgresql://"):
+                return "postgresql+psycopg2://" + v[len("postgresql://"):]
+        return v
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _split_cors_origins(cls, v: object) -> object:
+        """Allow CORS_ORIGINS to be given as a comma-separated string in the
+        environment (the natural form for a hosting dashboard) in addition to a
+        JSON array. Without this, a plain string fails settings validation and
+        the app cannot boot.
+        """
+        if isinstance(v, str):
+            s = v.strip()
+            if not s:
+                return []
+            if s.startswith("["):  # JSON array form
+                import json
+
+                return json.loads(s)
+            return [item.strip() for item in s.split(",") if item.strip()]
+        return v
 
 
 @lru_cache
