@@ -26,6 +26,8 @@ frontend/playwright-report/
 .env
 .env.*
 !.env.example
+!.env.production.example
+.env.production
 *.key
 *-key.json
 service-account*.json

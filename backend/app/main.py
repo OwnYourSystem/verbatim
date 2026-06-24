@@ -46,9 +46,22 @@ def _run_migrations() -> None:
         _log.exception("Database migration failed — the app may serve 500s")
 
 
+def _seed_users() -> None:
+    """Seed default users (idempotent). Never crashes startup."""
+    try:
+        import os
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+        from scripts.seed_users import seed
+        seed()
+    except Exception:
+        _log.exception("User seeding failed — continuing anyway")
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     _run_migrations()
+    _seed_users()
     yield
 
 
