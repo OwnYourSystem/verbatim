@@ -33,6 +33,10 @@ services:
   frontend:
     build: ./frontend
     restart: unless-stopped
+    environment:
+      PORT: "80"
+      BACKEND_ORIGIN: http://backend:8080
+      BACKEND_HOST: backend
     ports:
       - "80:80"
     depends_on:
