@@ -71,17 +71,18 @@ spend matter more than maximal autonomy for a personal tool.
 ### 5. A single source of truth, versioned
 The three-level domain model — **System → Task → Subtask** — is the spine of the
 whole app. Schema evolution is managed with **Alembic migrations** (0001 →
-0005), so the database shape is reproducible and the production DB is never
-hand-edited. *Priority inheritance* (a subtask's effective priority derives from
-its System) keeps the model normalized: priority lives in one place and cascades.
+0008), applied automatically on backend startup, so the database shape is
+reproducible and the production DB is never hand-edited. *Priority inheritance*
+(a subtask's effective priority derives from its System) keeps the model
+normalized: priority lives in one place and cascades.
 
 ### 6. Stateless API, externalized configuration
 The FastAPI service holds no session state — auth is a **stateless JWT**, so the
-service scales and restarts freely (it runs scale-to-zero on Render). All
+service scales and restarts freely (it runs scale-to-zero on **Cloud Run**). All
 secrets and environment-specific values (`DATABASE_URL`, `JWT_SECRET`,
-`PASSWORD_HASH`, `ANTHROPIC_API_KEY`) live **outside the code** in Render's
-environment, following the twelve-factor *config* principle. Nothing sensitive
-is ever committed.
+`PASSWORD_HASH`, `ANTHROPIC_API_KEY`) live **outside the code** as Cloud Run
+environment variables, following the twelve-factor *config* principle. Nothing
+sensitive is ever committed.
 
 ---
 
@@ -112,14 +113,20 @@ Purely deterministic. This works whether or not Claude is configured.
 
 ## Deployment topology
 
-- **Frontend** → built to static assets, served by **Vercel** (CDN), which
-  rewrites `/api/*` to the backend.
-- **Backend** → **FastAPI in Docker on Render**, auto-deployed from GitHub `main`.
-- **Database** → **PostgreSQL on Render**, schema applied via Alembic.
+Live on **Google Cloud** (project `mindanchor-500313`, region `europe-north2`).
+See [`DEPLOY.md`](DEPLOY.md) for the full runbook.
+
+- **Frontend** → React/Vite SPA built to static assets, served by **nginx on
+  Cloud Run** (`mindanchor-frontend`). nginx proxies `/api/*` to the backend
+  server-side, so the browser only talks to one origin.
+- **Backend** → **FastAPI in Docker on Cloud Run** (`mindanchor`), auto-deployed
+  from GitHub `main` via a **Cloud Build** trigger (build → Artifact Registry → deploy).
+- **Database** → **Cloud SQL PostgreSQL** (`mindanchor-db`); Alembic migrations
+  applied automatically on backend startup.
 - **AI** → **Anthropic Claude**, called only on user events.
 
-GitHub is the hub: code flows *in* via commits, and *out* to Render and Vercel
-via auto-deploy.
+GitHub is the hub: code flows *in* via commits, and *out* to Cloud Run via Cloud
+Build auto-deploy.
 
 ---
 
@@ -131,7 +138,7 @@ via auto-deploy.
 | Human stays in control | AI can't act instantly on its own |
 | Bounded, predictable AI cost | Not maximally "autonomous" |
 | Simple single-user model | No teams/sharing in v1 |
-| Cheap, scale-to-zero hosting | Cold-start latency on free tier |
+| Cheap, scale-to-zero hosting (Cloud Run) | Cold-start latency after idle |
 
 Every one of these trades flashiness for **trust, predictability, and
 resilience** — the right priorities for a system whose entire job is to be the

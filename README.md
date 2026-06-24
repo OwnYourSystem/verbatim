@@ -6,7 +6,14 @@ MindAnchor is a personal, AI-powered productivity system. You set monthly priori
 
 ## Status
 
-🟢 **Feature-complete for v1 (pre-deploy).** Phases 1–7 done: the full manual app plus the AI brain (propose→approve rebalancing, AI intake interview) and reports/briefing. Remaining: PWA polish + mobile scaffold (Phase 8) and cloud deployment.
+🟢 **Live on Google Cloud.** Phases 1–7 done (full manual app + the AI brain + reports/briefing) and **deployed to Cloud Run + Cloud SQL** with auto-deploy from `main`. Remaining: PWA polish + native mobile scaffold (Phase 8).
+
+| Surface | URL |
+|---|---|
+| **Web app** | https://mindanchor-frontend-2814170686.europe-north2.run.app |
+| Backend API / docs | https://mindanchor-p56twm4tsa-ma.a.run.app · `/docs` |
+
+See [`docs/DEPLOY.md`](docs/DEPLOY.md) for the deployment runbook and architecture diagram.
 
 The AI agents run against real Claude when an `ANTHROPIC_API_KEY` is present, and fall back to deterministic **offline stubs** otherwise — so the whole app (and the full test suite) works with no key or network.
 
@@ -46,7 +53,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detail.
 | AI | Anthropic Claude API (Opus for planning, Sonnet for fast calls) |
 | Auth | Single-user JWT |
 | Push | Web Push API (PWA service worker) |
-| Hosting | Vercel (frontend) + Cloud Run / Railway (backend) |
+| Hosting | Google Cloud Run — frontend (nginx) + backend (FastAPI); Cloud Build auto-deploy |
 | Mobile (later) | React Native (Expo), shared logic |
 
 ## Monorepo layout
@@ -99,13 +106,14 @@ Interactive docs at `/docs` when the backend runs.
 
 **Part C — mobile & deploy**
 8. PWA polish + React Native scaffold — _pending_
-9. Cloud deployment (Cloud SQL + Cloud Run + Vercel) — _pending_
+9. Cloud deployment (Cloud SQL + Cloud Run, auto-deploy via Cloud Build) — ✅ **live**
 
 ## Documentation
 
 - [`CLAUDE.md`](CLAUDE.md) — project guide, locked decisions, "Resume here", and full action log.
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — design + decisions.
-- [`docs/DATABASE.md`](docs/DATABASE.md) — local Postgres now, Cloud SQL at deploy.
+- [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) — architecture & philosophy (with the diagram).
+- [`docs/DEPLOY.md`](docs/DEPLOY.md) — **live deployment runbook** (Cloud Run + Cloud SQL + Cloud Build).
+- [`docs/DATABASE.md`](docs/DATABASE.md) — local Postgres now, Cloud SQL in production.
 - [`docs/AGENTS.md`](docs/AGENTS.md) — the AI brain: agents, action allow-list, enabling real Claude.
 - [`docs/NOTIFICATIONS.md`](docs/NOTIFICATIONS.md) — morning briefing & push (Tier 1 done, Tier 2 at deploy).
 

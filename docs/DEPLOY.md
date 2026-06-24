@@ -1,111 +1,163 @@
 # MindAnchor — Deployment Guide
 
-## Stack
+> **Status: LIVE on Google Cloud** (project `mindanchor-500313`, region `europe-north2`).
+> This supersedes the earlier Render/Vercel/Railway plans.
 
-```
-GitHub (main branch)
-    │
-    ├─── Railway  ──► FastAPI backend + Postgres DB
-    │                 (auto-deploys on push, Dockerfile-based)
-    │
-    └─── Vercel   ──► React PWA frontend
-                      (auto-deploys on push, pre-built dist)
-```
+![MindAnchor architecture](architecture.jpg)
 
-**Total cost: ~$5/mo on Railway Hobby plan. Vercel is free.**
+## Live URLs
 
----
-
-## One-time setup (browser only — no CLI needed)
-
-### Step 1 — Railway (backend + database)
-
-1. Go to **railway.app** → sign up with GitHub
-2. **New Project → Deploy from GitHub repo** → select `OwnYourSystem/MindAnchor`
-3. When asked which directory: select **`backend/`**
-4. Railway detects the `Dockerfile` automatically — click **Deploy**
-5. Once deployed, click **+ New** → **Database** → **Add PostgreSQL**
-   - Railway injects `DATABASE_URL` automatically into your service
-6. In your backend service → **Variables** tab, add these env vars:
-   ```
-   ENVIRONMENT        = production
-   JWT_SECRET         = <generate: openssl rand -base64 48>
-   ANTHROPIC_API_KEY  = sk-ant-...
-   CORS_ORIGINS       = https://YOUR_VERCEL_URL.vercel.app
-   ```
-7. Copy the **public URL** Railway gives the service (looks like `https://mindanchor-api-production.up.railway.app`)
-
-### Step 2 — Vercel (frontend)
-
-1. Go to **vercel.com** → sign up with GitHub
-2. **Add New Project** → Import `OwnYourSystem/MindAnchor`
-3. Set **Root Directory** to `frontend`
-4. Vercel auto-detects Vite — click **Deploy**
-5. Once deployed, copy the URL (e.g. `https://mindanchor.vercel.app`)
-6. Go back to Railway and update `CORS_ORIGINS` to this Vercel URL
-
-### Step 3 — Wire the proxy URL
-
-Update `frontend/vercel.json` — replace `RAILWAY_BACKEND_URL` with your actual Railway URL:
-
-```json
-"destination": "https://mindanchor-api-production.up.railway.app/:path*"
-```
-
-Then commit and push — Vercel redeploys automatically.
-
-### Step 4 — GitHub Actions secrets
-
-Go to **GitHub repo → Settings → Secrets and variables → Actions** and add:
-
-| Secret | Where to find it |
+| Surface | URL |
 |---|---|
-| `RAILWAY_TOKEN` | railway.app → Account Settings → Tokens → New token |
-| `VERCEL_TOKEN` | vercel.com → Account Settings → Tokens → Create |
-| `VERCEL_ORG_ID` | Run `vercel whoami` or check `.vercel/project.json` |
-| `VERCEL_PROJECT_ID` | Check `.vercel/project.json` after first deploy |
+| **Web app (use this)** | https://mindanchor-frontend-2814170686.europe-north2.run.app |
+| Backend API | https://mindanchor-p56twm4tsa-ma.a.run.app |
+| API docs (OpenAPI UI) | https://mindanchor-p56twm4tsa-ma.a.run.app/docs |
 
-After this, every push to `main` automatically:
-- Runs tests → deploys backend to Railway → runs `alembic upgrade head` → deploys frontend to Vercel
+The backend root (`/`) returns `{"app":"MindAnchor","version":"0.1.0","status":"ok"}` —
+that is the API answering correctly, not an error. The browsable app is the **frontend** URL.
 
 ---
 
-## Running migrations manually
+## Topology
 
-Railway Dashboard → your backend service → **Shell** tab:
-```bash
-alembic upgrade head
+Two Cloud Run services + one Cloud SQL instance, all in `europe-north2`:
+
+```
+User ──HTTPS──► mindanchor-frontend (Cloud Run)        ── CI/CD ──
+                React SPA served by nginx              GitHub main ─► Cloud Build
+                  │  nginx proxies /api/ ─┐                          │ build backend/Dockerfile
+                  ▼                       │                          ▼
+                mindanchor (Cloud Run)  ◄─┘                     Artifact Registry
+                FastAPI + uvicorn                                    │ deploy image
+                  │                                                  ▼
+                  ▼                                              mindanchor (Cloud Run)
+                Cloud SQL — PostgreSQL (mindanchor-db)
+                  │
+                Anthropic Claude (optional, on user events)
 ```
 
-Or via Railway CLI locally:
+Because the frontend's nginx proxies `/api/` to the backend **server-side**, the
+browser only ever talks to one origin — there is no cross-origin (CORS) hop in
+the normal request path.
+
+---
+
+## Components
+
+| Component | GCP resource | Notes |
+|---|---|---|
+| Frontend | Cloud Run `mindanchor-frontend` | React+Vite SPA built to static, served by nginx; `port 8080`, public |
+| Backend | Cloud Run `mindanchor` | FastAPI/uvicorn; `port 8080`, 1Gi memory, public |
+| Database | Cloud SQL `mindanchor-db` (PostgreSQL) | connected via the Cloud SQL connector socket |
+| Images | Artifact Registry `cloud-run-source-deploy` | Docker images, tagged by commit SHA |
+| CI/CD | Cloud Build trigger `668357f1-…` | fires on push to `OwnYourSystem/MindAnchor` `main` |
+
+---
+
+## CI/CD — how a deploy happens
+
+The Cloud Build trigger watches `main` and runs three steps
+(`docker build backend -f backend/Dockerfile` → push → `gcloud run services update`):
+
+1. **Build** the backend image from `backend/Dockerfile`, tagged `:$COMMIT_SHA`.
+2. **Push** it to Artifact Registry.
+3. **Deploy** by updating the `mindanchor` Cloud Run service to that image.
+
+The deploy step **only swaps the image** — it does not touch env vars or memory,
+so runtime configuration persists across deploys.
+
+> The **frontend has no trigger yet** — it is deployed manually (see below). Wire a
+> second trigger if you want `frontend/` changes to auto-deploy too.
+
+---
+
+## Backend — runtime configuration (Cloud Run env vars)
+
+Set on the `mindanchor` service; persist across auto-deploys.
+
+| Var | Purpose |
+|---|---|
+| `DATABASE_URL` | `postgresql+psycopg2://mindanchor:<pwd>@/mindanchor?host=/cloudsql/mindanchor-500313:europe-north2:mindanchor-db` |
+| `JWT_SECRET` | JWT signing secret |
+| `PASSWORD_HASH` | bcrypt hash of the owner password |
+| `ANTHROPIC_API_KEY` | Claude API key (omit → offline stub) |
+| `CORS_ORIGINS` | comma-separated or JSON list; empty = none |
+
+The Cloud Run service account needs `roles/cloudsql.client` to reach Cloud SQL.
+
+### Set / rotate the owner password
+
 ```bash
-npm install -g @railway/cli
-railway login
-railway run --service mindanchor-api alembic upgrade head
+# 1. generate a bcrypt hash
+python -c "import bcrypt; print(bcrypt.hashpw(b'NEW_PASSWORD', bcrypt.gensalt(12)).decode())"
+
+# 2. update the service (^@^ delimiter avoids issues with $ in the hash)
+gcloud run services update mindanchor --project mindanchor-500313 --region europe-north2 \
+  --update-env-vars '^@^PASSWORD_HASH=<hash-from-step-1>'
 ```
+
+---
+
+## Manual deploys (when needed)
+
+### Backend (normally automatic via the trigger)
+
+```bash
+# Re-run the trigger's pipeline for the current main, or build+deploy by hand:
+gcloud run deploy mindanchor --project mindanchor-500313 --region europe-north2 \
+  --source backend
+```
+
+### Frontend (currently manual)
+
+The frontend image is env-driven so the API upstream is injectable at deploy time:
+
+```bash
+BACKEND=mindanchor-p56twm4tsa-ma.a.run.app
+gcloud run deploy mindanchor-frontend --project mindanchor-500313 --region europe-north2 \
+  --source frontend --port 8080 --allow-unauthenticated \
+  --set-env-vars "BACKEND_ORIGIN=https://${BACKEND},BACKEND_HOST=${BACKEND}"
+```
+
+`frontend/nginx.conf` is an nginx template expanded at container start via envsubst
+(`PORT`, `BACKEND_ORIGIN`, `BACKEND_HOST`). Locally, `docker-compose` supplies the
+same vars pointing at the `backend` service.
+
+---
+
+## Database
+
+- Instance: `mindanchor-db` (PostgreSQL, `europe-north2`), database `mindanchor`, user `mindanchor`.
+- **Migrations run automatically** on backend startup (Alembic, inside the FastAPI
+  lifespan hook — see `backend/app/main.py`). No manual `alembic upgrade` needed on deploy.
+- Connect for inspection with the Cloud SQL Auth Proxy:
+  ```bash
+  cloud-sql-proxy mindanchor-500313:europe-north2:mindanchor-db
+  psql "host=127.0.0.1 dbname=mindanchor user=mindanchor"
+  ```
 
 ---
 
 ## Local development
 
 ```bash
-# Backend
-cd backend
-cp .env.example .env     # fill in DATABASE_URL (local Postgres) + ANTHROPIC_API_KEY
-uvicorn app.main:app --reload --port 8000
+# Backend (needs local Postgres + backend/.env — see DATABASE.md)
+cd backend && uvicorn app.main:app --reload --port 8000
 
-# Frontend
-cd frontend
-npm install
-npm run dev              # http://localhost:5173
+# Frontend (separate terminal)
+cd frontend && npm install && npm run dev    # http://localhost:5173
+
+# Or the whole stack with Docker:
+docker compose up --build                    # frontend :80, backend :8080, postgres
 ```
 
 ---
 
-## Cost estimate
+## Troubleshooting
 
-| Resource | Plan | ~Cost/mo |
-|---|---|---|
-| Railway Hobby | Backend + Postgres | ~$5 |
-| Vercel | Hobby (free) | $0 |
-| **Total** | | **~$5/mo** |
+| Symptom | Cause / fix |
+|---|---|
+| Container "failed to start and listen on PORT=8080" | App crashed at startup — check `gcloud run services logs read mindanchor`. A common past cause was an empty/invalid `CORS_ORIGINS` (now hardened with `NoDecode` in config). |
+| Cloud SQL `403 … cloudsql.instances.get` | Grant the Cloud Run service account `roles/cloudsql.client`. |
+| `gcloud run deploy --source` `403 storage.objects.get` | Grant the build service account `roles/cloudbuild.builds.builder`, `roles/storage.objectViewer`, `roles/artifactregistry.writer`. |
+| Browser shows JSON `{"app":"MindAnchor",…}` | You opened the **backend** URL — open the **frontend** URL instead. |
