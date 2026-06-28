@@ -66,33 +66,8 @@ The Cloud Build trigger watches `main` and runs three steps
 The deploy step **only swaps the image** — it does not touch env vars or memory,
 so runtime configuration persists across deploys.
 
-> ⚠ The existing trigger deploys the **backend only**. Until the frontend trigger
-> below is created, **frontend changes do not go live on a push/merge to `main`** —
-> you must run the manual frontend deploy. The deploy-order rule still applies.
-
-### Wire the frontend trigger (one-time)
-
-`frontend/cloudbuild.yaml` builds the frontend image and deploys it to
-`mindanchor-frontend`. Create a trigger pointed at it so `frontend/` changes
-auto-deploy (scoped to frontend paths so it never fires on backend-only commits):
-
-```bash
-gcloud builds triggers create github \
-  --name=mindanchor-frontend \
-  --repo-owner=OwnYourSystem --repo-name=MindAnchor \
-  --branch-pattern='^main$' \
-  --build-config=frontend/cloudbuild.yaml \
-  --included-files='frontend/**' \
-  --region=europe-north2 --project=mindanchor-500313
-```
-
-The Cloud Build service account needs `roles/run.admin`, `roles/artifactregistry.writer`,
-and `roles/iam.serviceAccountUser` on the Cloud Run runtime service account.
-
-> ⚠ **Deploy order matters across breaking API changes.** The frontend assumes the
-> backend's current response shape. When a change touches both (e.g. CR-2's SK
-> `rating`/`specific_knowledges`), let the **backend** deploy first (merge to
-> `main` → auto-deploy → migrations run on startup), then deploy the **frontend**.
+> The **frontend has no trigger yet** — it is deployed manually (see below). Wire a
+> second trigger if you want `frontend/` changes to auto-deploy too.
 
 ---
 
@@ -133,7 +108,7 @@ gcloud run deploy mindanchor --project mindanchor-500313 --region europe-north2 
   --source backend
 ```
 
-### Frontend (currently manual — required for any frontend change to go live)
+### Frontend (currently manual)
 
 The frontend image is env-driven so the API upstream is injectable at deploy time:
 
@@ -182,18 +157,7 @@ docker compose up --build                    # frontend :80, backend :8080, post
 
 | Symptom | Cause / fix |
 |---|---|
-| Frontend changes not showing after merge | The frontend has **no auto-deploy trigger** — run the manual frontend deploy above. A merge to `main` only redeploys the backend. |
 | Container "failed to start and listen on PORT=8080" | App crashed at startup — check `gcloud run services logs read mindanchor`. A common past cause was an empty/invalid `CORS_ORIGINS` (now hardened with `NoDecode` in config). |
 | Cloud SQL `403 … cloudsql.instances.get` | Grant the Cloud Run service account `roles/cloudsql.client`. |
 | `gcloud run deploy --source` `403 storage.objects.get` | Grant the build service account `roles/cloudbuild.builds.builder`, `roles/storage.objectViewer`, `roles/artifactregistry.writer`. |
 | Browser shows JSON `{"app":"MindAnchor",…}` | You opened the **backend** URL — open the **frontend** URL instead. |
-
----
-
-> **Note on repo vs. live infra (2026-06-28):** the live deployment is on Google
-> Cloud as described above. The frontend Cloud Run image is now reproducible from
-> source — `frontend/Dockerfile`, `frontend/nginx.conf`, `frontend/cloudbuild.yaml`,
-> and root `docker-compose.yml` are committed. `deploy/cloudrun.yaml` and
-> `deploy/cloudsql-setup.sh` capture the GCP setup. The earlier-plan config
-> `render.yaml` and `frontend/vercel.json` remains **stale** and is not used by the
-> live GCP deploy (kept for reference; safe to delete once you're confident).

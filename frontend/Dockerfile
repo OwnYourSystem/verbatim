@@ -1,25 +1,20 @@
-# ── Build stage ───────────────────────────────────────────────────────────────
-FROM node:20-alpine AS build
+## Stage 1: build the React PWA
+FROM node:20-alpine AS builder
 WORKDIR /app
-
-# Install deps against the lockfile first (better layer caching).
-COPY package.json package-lock.json ./
+COPY package*.json ./
 RUN npm ci
-
-# Build the static SPA (tsc -b && vite build → /app/dist).
 COPY . .
 RUN npm run build
 
-# ── Serve stage ───────────────────────────────────────────────────────────────
-FROM nginx:1.27-alpine
-
-# Static assets.
-COPY --from=build /app/dist /usr/share/nginx/html
-
-# nginx config template — the official entrypoint runs envsubst on
-# /etc/nginx/templates/*.template at startup (PORT / BACKEND_ORIGIN / BACKEND_HOST).
+## Stage 2: serve with nginx
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+# Templated config: nginx:alpine runs envsubst on /etc/nginx/templates/*.template
+# at container start, expanding PORT / BACKEND_ORIGIN / BACKEND_HOST.
 COPY nginx.conf /etc/nginx/templates/default.conf.template
-
-# Cloud Run injects PORT (8080); BACKEND_* are set on the service / via Cloud Build.
-ENV PORT=8080
-EXPOSE 8080
+# Defaults for local `docker run` without overrides (compose / Cloud Run set their own).
+ENV PORT=80 \
+    BACKEND_ORIGIN=http://backend:8080 \
+    BACKEND_HOST=backend
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

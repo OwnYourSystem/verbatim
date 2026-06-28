@@ -1,48 +1,47 @@
-# Local full-stack dev: Postgres + backend (FastAPI) + frontend (nginx).
-# Mirrors the Cloud Run topology so the frontend proxies /api/ → backend.
-#
-#   docker compose up --build
-#   # frontend → http://localhost:8080 , backend → http://localhost:8000
 services:
-  db:
+  postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: mindanchor
-      POSTGRES_PASSWORD: mindanchor
       POSTGRES_DB: mindanchor
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: mindanchor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mindanchor"]
       interval: 5s
-      timeout: 3s
+      timeout: 5s
       retries: 10
-    volumes:
-      - pgdata:/var/lib/postgresql/data
 
   backend:
     build: ./backend
+    restart: unless-stopped
+    env_file: .env.production
     environment:
-      DATABASE_URL: postgresql+psycopg2://mindanchor:mindanchor@db:5432/mindanchor
-      JWT_SECRET: dev-secret-change-me
-      PORT: "8000"
-      # ANTHROPIC_API_KEY: ""   # omit → offline stub
-    ports:
-      - "8000:8000"
+      DATABASE_URL: postgresql+psycopg2://mindanchor:${POSTGRES_PASSWORD}@postgres:5432/mindanchor
+      PORT: "8080"
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   frontend:
     build: ./frontend
+    restart: unless-stopped
     environment:
-      PORT: "8080"
-      BACKEND_ORIGIN: http://backend:8000
+      PORT: "80"
+      BACKEND_ORIGIN: http://backend:8080
       BACKEND_HOST: backend
     ports:
-      - "8080:8080"
+      - "80:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   pgdata:

@@ -15,8 +15,8 @@ FROM python:3.11-slim AS runtime
 
 WORKDIR /app
 
-# Runtime deps for psycopg2
-RUN apt-get update && apt-get install -y --no-install-recommends libpq5 \
+# Runtime deps: psycopg2 + curl (needed for Docker healthcheck)
+RUN apt-get update && apt-get install -y --no-install-recommends libpq5 curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed packages from builder
@@ -32,5 +32,8 @@ ENV PORT=8080
 RUN adduser --disabled-password --gecos "" appuser
 USER appuser
 
-# Run migrations then start server
-CMD ["sh", "-c", "alembic upgrade head && python scripts/seed_users.py && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1"]
+# Start uvicorn directly. Migrations and user seeding run inside the FastAPI
+# lifespan hook (app/main.py) with full error logging and no fatal crashes.
+# Running alembic here with && would abort startup if the DB is briefly
+# unreachable, preventing uvicorn from ever binding to PORT.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1"]

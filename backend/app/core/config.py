@@ -7,9 +7,10 @@ DATABASE_URL comes from the managed Postgres add-on.
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Annotated
 
 from pydantic import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -41,8 +42,15 @@ class Settings(BaseSettings):
     model_planning: str = "claude-opus-4-8"
     model_fast: str = "claude-sonnet-4-6"
 
-    # CORS — comma-separated in env: CORS_ORIGINS=https://mindanchor-frontend-xxxx.run.app,https://custom.domain
-    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    # CORS — comma-separated in env: CORS_ORIGINS=https://mindanchor.vercel.app,https://custom.domain
+    # NoDecode: skip pydantic-settings' JSON pre-decoding of this complex-typed
+    # env var so the validator below owns all parsing. Without it, an empty or
+    # plain-string CORS_ORIGINS raises JSONDecodeError at startup before the
+    # validator can run — the failure that took the Cloud Run service down.
+    cors_origins: Annotated[list[str], NoDecode] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
 
     @field_validator("database_url", mode="before")
     @classmethod
