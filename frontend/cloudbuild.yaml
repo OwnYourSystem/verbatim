@@ -1,0 +1,54 @@
+# Cloud Build pipeline for the FRONTEND Cloud Run service (mindanchor-frontend).
+#
+# Wire a trigger to this file so frontend/ changes auto-deploy (today the
+# frontend is deployed manually). One-time trigger creation:
+#
+#   gcloud builds triggers create github \
+#     --name=mindanchor-frontend \
+#     --repo-owner=OwnYourSystem --repo-name=MindAnchor \
+#     --branch-pattern='^main$' \
+#     --build-config=frontend/cloudbuild.yaml \
+#     --included-files='frontend/**' \
+#     --region=europe-north2 --project=mindanchor-500313
+#
+# --included-files limits the trigger to frontend changes so it doesn't fire on
+# backend-only commits (the existing backend trigger handles those).
+steps:
+  # 1. Build the image from frontend/Dockerfile.
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_IMAGE}:$COMMIT_SHA
+      - -f
+      - frontend/Dockerfile
+      - frontend
+
+  # 2. Push to Artifact Registry.
+  - name: gcr.io/cloud-builders/docker
+    args: [push, "${_IMAGE}:$COMMIT_SHA"]
+
+  # 3. Deploy to Cloud Run (env vars wire nginx → the backend service).
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - mindanchor-frontend
+      - --image=${_IMAGE}:$COMMIT_SHA
+      - --region=europe-north2
+      - --platform=managed
+      - --port=8080
+      - --allow-unauthenticated
+      - --set-env-vars=BACKEND_ORIGIN=${_BACKEND_ORIGIN},BACKEND_HOST=${_BACKEND_HOST}
+
+substitutions:
+  _IMAGE: europe-north2-docker.pkg.dev/mindanchor-500313/cloud-run-source-deploy/mindanchor-frontend
+  _BACKEND_ORIGIN: https://mindanchor-p56twm4tsa-ma.a.run.app
+  _BACKEND_HOST: mindanchor-p56twm4tsa-ma.a.run.app
+
+images:
+  - "${_IMAGE}:$COMMIT_SHA"
+
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -66,10 +66,28 @@ The Cloud Build trigger watches `main` and runs three steps
 The deploy step **only swaps the image** — it does not touch env vars or memory,
 so runtime configuration persists across deploys.
 
-> ⚠ The trigger deploys the **backend only**. The **frontend has no trigger yet** —
-> it is deployed manually (see below). So **frontend changes do not go live on a
-> push/merge to `main`**; you must run the manual frontend deploy. Wire a second
-> trigger if you want `frontend/` changes to auto-deploy too.
+> ⚠ The existing trigger deploys the **backend only**. Until the frontend trigger
+> below is created, **frontend changes do not go live on a push/merge to `main`** —
+> you must run the manual frontend deploy. The deploy-order rule still applies.
+
+### Wire the frontend trigger (one-time)
+
+`frontend/cloudbuild.yaml` builds the frontend image and deploys it to
+`mindanchor-frontend`. Create a trigger pointed at it so `frontend/` changes
+auto-deploy (scoped to frontend paths so it never fires on backend-only commits):
+
+```bash
+gcloud builds triggers create github \
+  --name=mindanchor-frontend \
+  --repo-owner=OwnYourSystem --repo-name=MindAnchor \
+  --branch-pattern='^main$' \
+  --build-config=frontend/cloudbuild.yaml \
+  --included-files='frontend/**' \
+  --region=europe-north2 --project=mindanchor-500313
+```
+
+The Cloud Build service account needs `roles/run.admin`, `roles/artifactregistry.writer`,
+and `roles/iam.serviceAccountUser` on the Cloud Run runtime service account.
 
 > ⚠ **Deploy order matters across breaking API changes.** The frontend assumes the
 > backend's current response shape. When a change touches both (e.g. CR-2's SK
@@ -173,10 +191,9 @@ docker compose up --build                    # frontend :80, backend :8080, post
 ---
 
 > **Note on repo vs. live infra (2026-06-28):** the live deployment is on Google
-> Cloud as described above. The repo also still contains earlier-plan config —
-> `render.yaml` and `frontend/vercel.json` — which are **stale** and not used by
-> the live GCP deploy. The frontend Cloud Run image referenced here
-> (`frontend/nginx.conf`, a frontend `Dockerfile`, root `docker-compose.yml`) is
-> built from infra not yet committed to this repo; commit it if you want the
-> frontend build reproducible from source. `deploy/cloudrun.yaml` and
-> `deploy/cloudsql-setup.sh` capture the GCP setup.
+> Cloud as described above. The frontend Cloud Run image is now reproducible from
+> source — `frontend/Dockerfile`, `frontend/nginx.conf`, `frontend/cloudbuild.yaml`,
+> and root `docker-compose.yml` are committed. `deploy/cloudrun.yaml` and
+> `deploy/cloudsql-setup.sh` capture the GCP setup. The earlier-plan config
+> `render.yaml` and `frontend/vercel.json` remains **stale** and is not used by the
+> live GCP deploy (kept for reference; safe to delete once you're confident).
