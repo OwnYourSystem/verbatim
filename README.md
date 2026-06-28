@@ -6,7 +6,7 @@ MindAnchor is a personal, AI-powered productivity system. You set monthly priori
 
 ## Status
 
-🟢 **Feature-complete for v1 (pre-deploy).** Phases 1–7 done: the full manual app plus the AI brain (propose→approve rebalancing, AI intake interview) and reports/briefing. Remaining: PWA polish + mobile scaffold (Phase 8) and cloud deployment.
+🟢 **Live on Google Cloud.** Phases 1–9 done: the full manual app, the AI brain (propose→approve rebalancing, AI intake interview), reports/briefing, PWA polish + mobile scaffold, and cloud deployment (Cloud Run + Cloud SQL). Single-user — each person runs their own instance.
 
 The AI agents run against real Claude when an `ANTHROPIC_API_KEY` is present, and fall back to deterministic **offline stubs** otherwise — so the whole app (and the full test suite) works with no key or network.
 
@@ -46,7 +46,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detail.
 | AI | Anthropic Claude API (Opus for planning, Sonnet for fast calls) |
 | Auth | Single-user JWT |
 | Push | Web Push API (PWA service worker) |
-| Hosting | Vercel (frontend) + Cloud Run / Railway (backend) |
+| Hosting | Google Cloud — Cloud Run (frontend + backend) + Cloud SQL (PostgreSQL) |
 | Mobile (later) | React Native (Expo), shared logic |
 
 ## Monorepo layout
@@ -98,35 +98,33 @@ Interactive docs at `/docs` when the backend runs.
 7. Reports & morning briefing ✅
 
 **Part C — mobile & deploy**
-8. PWA polish + React Native scaffold — _pending_
-9. Cloud deployment (Cloud SQL + Cloud Run + Vercel) — _pending_
+8. PWA polish + React Native scaffold ✅
+9. Cloud deployment (Cloud SQL + Cloud Run) ✅
 
 ## Documentation
 
+- [`SETUP.md`](SETUP.md) — clone, run locally, and self-host on your own Google Cloud.
+- [`docs/DEPLOY.md`](docs/DEPLOY.md) — the live GCP deployment runbook (Cloud Run + Cloud SQL + Cloud Build).
+- [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) — architecture & philosophy (the "why").
 - [`CLAUDE.md`](CLAUDE.md) — project guide, locked decisions, "Resume here", and full action log.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — design + decisions.
 - [`docs/DATABASE.md`](docs/DATABASE.md) — local Postgres now, Cloud SQL at deploy.
 - [`docs/AGENTS.md`](docs/AGENTS.md) — the AI brain: agents, action allow-list, enabling real Claude.
 - [`docs/NOTIFICATIONS.md`](docs/NOTIFICATIONS.md) — morning briefing & push (Tier 1 done, Tier 2 at deploy).
 
-## Local development
+## Quick start
 
-See [`backend/README.md`](backend/README.md) and [`frontend/README.md`](frontend/README.md).
-
-### Quick start
+The fastest cross-platform way is Docker:
 
 ```bash
-# Backend (needs local Postgres + backend/.env — see docs/DATABASE.md)
-cd backend && python -m venv .venv && .venv/Scripts/Activate.ps1
-pip install -r requirements.txt
-python scripts/init_db.py
-uvicorn app.main:app --reload --port 8000
-
-# Frontend (separate terminal)
-cd frontend && npm install && npm run dev   # http://localhost:5173
+git clone https://github.com/OwnYourSystem/MindAnchor.git
+cd MindAnchor && docker compose up --build
+# frontend → http://localhost:8080   backend → http://localhost:8000
 ```
 
-> On a Windows network-share checkout, build the venv / run npm from a local-disk copy — see the environment notes in [`CLAUDE.md`](CLAUDE.md).
+Without Docker, or to deploy to your own Google Cloud project, see
+**[`SETUP.md`](SETUP.md)** (full onboarding + self-hosting). Per-service notes:
+[`backend/README.md`](backend/README.md), [`frontend/README.md`](frontend/README.md).
 
 ## License
 

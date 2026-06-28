@@ -42,6 +42,17 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 ---
 
+## Operating model (set by owner 2026-06-28)
+
+How this project is worked on going forward:
+
+- **GitHub is the single source of truth.** All changes land via branches → PRs → merge to `main`. This Claude Code session/env is **ephemeral**: nothing is persisted on it except (a) code, which must be pushed to the repo, and (b) learnings, which must be committed here in `CLAUDE.md`. Treat the local checkout as disposable.
+- **Infra is GCP** for both test and prod (Cloud Run + Cloud SQL). Deploys are **GitHub-driven**: merge to `main` → Cloud Build trigger auto-deploys (backend today; frontend once its trigger is created). No credentials should live on the ephemeral env — the CI/CD is keyless/GitHub-triggered by design.
+- **The repo is multi-user.** Other people clone it and deploy to *their own* GCP projects. Keep everything generic: no machine-specific absolute paths, no secrets, working `SETUP.md`. (The Windows/network-share notes below are the *owner's personal* local-dev quirks, not requirements for others.)
+- **Owner needs deployment visibility from inside the Claude env** to make test/feedback decisions. ⚠ **Current limitation (2026-06-28):** this env has **no `gcloud`, no GCP MCP connector, and its network policy blocks egress to `*.run.app`** (agent proxy returns `403 CONNECT` for the Cloud Run hosts — verified via `$HTTPS_PROXY/__agentproxy/status`). So from here I can read **GitHub** (PRs, CI/commit statuses, Cloud Build statuses posted to GitHub) but **cannot reach the live app or GCP directly**. To enable runtime visibility the owner must, at env-creation time: allow egress to the Cloud Run hosts in the network policy, and/or add a read-only GCP credential or a GCP MCP connector. Until then, report deploy results via GitHub statuses, not by curling the app.
+
+---
+
 ## Project
 
 MindAnchor — a personal, single-user AI productivity system (AI project manager + scrum master + calendar + morning briefing). Source of truth for product scope: [`MindAnchor_Product_Description.md`](../MindAnchor_Product_Description.md). Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
@@ -78,6 +89,16 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
 ---
 
 ## Action log
+
+### 2026-06-28 — Deploy-doc reconciliation, frontend deploy infra, multi-user repo + operating model
+
+Follow-ups after CR-2 (all on branch `claude/determined-curie-h90f00`, PR #10):
+
+- **Deploy docs reconciled to GCP.** The repo's docs contradicted each other and reality (`docs/DEPLOY.md`→Railway, `docs/DOCUMENTATION.md`→Render, `CLAUDE.md`→Render+Vercel). Rewrote `docs/DEPLOY.md` (GCP runbook), `docs/DOCUMENTATION.md` (Cloud Run/Cloud SQL topology, migrations 0001→0009), and the `CLAUDE.md` "Resume here" block. Flagged `render.yaml` / `frontend/vercel.json` as stale-but-tracked.
+- **Frontend deploy infra committed** (the live frontend had been deployed from uncommitted infra with no trigger): `frontend/Dockerfile` (node build → nginx on `$PORT`), `frontend/nginx.conf` (envsubst template; proxies `/api/` → `${BACKEND_ORIGIN}` with the prefix stripped to match FastAPI's root-mounted routes; SPA fallback; SW/asset cache headers), `frontend/.dockerignore`, `frontend/cloudbuild.yaml` + the `gcloud builds triggers create` command, root `docker-compose.yml`. ⚠ Image not built here (no docker daemon); `npm run build` passes, nginx template is standard — validate via Cloud Build or `docker compose up --build`.
+- **Repo generalized for multi-user sharing:** new `SETUP.md` (clone → run locally via Docker or manually → self-host on your own GCP), README refreshed (status = live on GCP; hosting = Cloud Run + Cloud SQL; cross-platform Docker quick start; doc index). Secret check: only `backend/.env.example` + `sk-ant-...` placeholders tracked; real `.env` gitignored.
+- **Operating model recorded** (see the new section above): GitHub = single source of truth, ephemeral env, GCP GitHub-driven deploys, multi-user repo, and the current GCP-visibility limitation (no gcloud/GCP MCP, egress to `*.run.app` blocked by the env network policy).
+- **PR #10 opened** (`claude/determined-curie-h90f00` → `main`) and **subscribed** for CI/review autofix. CI note: GitHub Actions `ci.yml` doesn't run on this PR (effectively runs on `main` pushes; `main`'s recent runs fail on deploy jobs that need secrets — pre-existing, not code). Verified locally instead: ruff 0.8.4 clean, 40 tests pass, frontend build OK.
 
 ### 2026-06-28 — Change Request 2 (CR-2): coherent SK ER model, 3-level thermometer, 3D universe
 
