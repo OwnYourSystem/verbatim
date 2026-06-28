@@ -6,16 +6,18 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 ## ▶ Resume here (read this first)
 
-**Status:** Phases 1–9 are **done, committed, pushed**. Production is **live on Render + Vercel** (NOT Cloud Run/Cloud SQL — `docs/DEPLOY.md` and `deploy/` are stale from an earlier plan).
+**Status:** Phases 1–9 are **done, committed, pushed**. Production is **live on Google Cloud** (project `mindanchor-500313`, region `europe-north2`) — Cloud Run + Cloud SQL. The authoritative runbook is `docs/DEPLOY.md`; architecture in `docs/DOCUMENTATION.md`.
 
-**⚠ Actual production topology (authoritative — 2026-06-22):**
-- **Backend:** Render web service `mindanchor-api` (`https://mindanchor-api.onrender.com`), Docker from `backend/`, `autoDeploy: true` on push to `main`. Config in `render.yaml`.
-- **Database:** Render managed Postgres `mindanchor-db`. Render's `DATABASE_URL` uses the bare `postgres://` scheme — `config.py` rewrites it to `postgresql+psycopg2://` (SQLAlchemy 2.x rejects the alias; this was the cause of a total 500 outage, fixed in PR #4).
-- **Frontend:** Vercel; `frontend/vercel.json` proxies `/api/*` → the Render backend.
+**⚠ Actual production topology (authoritative — 2026-06-28, from owner's deploy docs):**
+- **Frontend:** Cloud Run `mindanchor-frontend` (`https://mindanchor-frontend-2814170686.europe-north2.run.app`) — React/Vite SPA served by nginx; nginx proxies `/api/*` to the backend server-side (so no CORS hop). **Deployed manually** (no Cloud Build trigger yet).
+- **Backend:** Cloud Run `mindanchor` (`https://mindanchor-p56twm4tsa-ma.a.run.app`), FastAPI/uvicorn, Docker from `backend/`. Auto-deployed from GitHub `main` by a **Cloud Build trigger** (build `backend/Dockerfile` → Artifact Registry → `gcloud run services update`). The deploy step **only swaps the image**, so Cloud Run env vars persist.
+- **Database:** Cloud SQL Postgres `mindanchor-db`, reached via the Cloud SQL connector socket. `config.py` still normalizes a bare `postgres://` `DATABASE_URL` to `postgresql+psycopg2://` (SQLAlchemy 2.x rejects the alias).
 - **Migrations:** applied on startup by the FastAPI lifespan hook in `app/main.py` (`alembic upgrade head`).
-- The `Deploy backend (Render)` CI job is a no-op unless `RENDER_DEPLOY_HOOK_URL` secret is set; Render's `autoDeploy` handles deploys. The `Deploy frontend (Vercel)` CI job fails unless `VERCEL_TOKEN`/`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` secrets are set (Vercel's own GitHub integration also auto-deploys).
+- **⚠ Stale-but-tracked config:** `render.yaml` and `frontend/vercel.json` are from the earlier Render/Vercel plan and are **NOT used** by the live GCP deploy. The GCP setup lives in `deploy/cloudrun.yaml` + `deploy/cloudsql-setup.sh`. `docs/DEPLOY.md` references `frontend/nginx.conf` / frontend `Dockerfile` / root `docker-compose.yml` that are **not yet committed** to the repo.
 
-**Do next:** confirm the live site loads after the PR #4 deploy. Optionally set the Vercel/Render CI secrets (or delete those CI jobs since both platforms auto-deploy). Then Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
+**⚠ Frontend changes don't auto-deploy:** the Cloud Build trigger rebuilds the **backend only**. Merging to `main` will NOT update the live frontend — run the manual frontend deploy in `docs/DEPLOY.md`. For breaking API changes (e.g. CR-2's SK `rating`), deploy **backend first, then frontend**.
+
+**Do next:** CR-2 (SK rating model) is on branch `claude/determined-curie-h90f00` → open/merge PR so the backend auto-deploys + runs migration 0009, then **manually deploy the frontend** for the new SK Universe/Knowledge Pool to appear live. Optionally wire a frontend Cloud Build trigger. Then Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
 
 **Live agent is ON:** `backend/.env` has a real (rotated) key, so `get_llm()`/`get_intake()` use real Claude when the backend runs. Not yet smoke-tested live (needs backend running against local Postgres). Tests stay offline via `tests/conftest.py`.
 
