@@ -1,147 +1,37 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api";
-import type { SpecificKnowledge } from "../types";
+import type { SKRating, SpecificKnowledge } from "../types";
 import { PageHeader } from "../components/ui";
+import { RATINGS, Thermometer, ratingColor, ratingLabel } from "../components/Thermometer";
 
-type Filter = "all" | "hot" | "warm" | "cold";
-
-function tempLabel(t: number) {
-  if (t >= 7) return "Hot";
-  if (t >= 4) return "Warm";
-  return "Cold";
-}
-function tempColor(t: number): string {
-  if (t >= 9) return "#ef4444";
-  if (t >= 7) return "#f97316";
-  if (t >= 4) return "#14b8a6";
-  return "#3b82f6";
-}
-
-const TUBE_TOP = 8;
-const TUBE_H = 58;
-
-function Thermometer({
-  temperature,
-  onChange,
-}: {
-  temperature: number;
-  onChange?: (t: number) => void;
-}) {
-  const pct = ((temperature - 1) / 9) * 100;
-  const color = tempColor(temperature);
-  const svgRef = useRef<SVGSVGElement>(null);
-  const dragging = useRef(false);
-
-  const yToTemp = (clientY: number): number => {
-    const rect = svgRef.current!.getBoundingClientRect();
-    // SVG viewBox maps to actual pixel rect
-    const scaleY = 90 / rect.height;
-    const svgY = (clientY - rect.top) * scaleY;
-    // clamp to tube range
-    const clamped = Math.max(TUBE_TOP, Math.min(TUBE_TOP + TUBE_H, svgY));
-    const fraction = 1 - (clamped - TUBE_TOP) / TUBE_H;
-    return Math.max(1, Math.min(10, Math.round(1 + fraction * 9)));
-  };
-
-  const onMouseDown = (e: React.MouseEvent) => {
-    if (!onChange) return;
-    e.preventDefault();
-    dragging.current = true;
-    onChange(yToTemp(e.clientY));
-    const move = (ev: MouseEvent) => { if (dragging.current) onChange(yToTemp(ev.clientY)); };
-    const up = () => { dragging.current = false; window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
-  };
-
-  const onClick = (e: React.MouseEvent) => {
-    if (!onChange) return;
-    onChange(yToTemp(e.clientY));
-  };
-
-  const gradId = `thermo-g-${temperature}`;
-  return (
-    <svg
-      ref={svgRef}
-      width="28"
-      height="90"
-      viewBox="0 0 28 90"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ cursor: onChange ? "ns-resize" : "default", userSelect: "none" }}
-      onMouseDown={onMouseDown}
-      onClick={onClick}
-    >
-      <defs>
-        <linearGradient id={gradId} x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0%" stopColor="#3b82f6" />
-          <stop offset="50%" stopColor="#14b8a6" />
-          <stop offset="80%" stopColor="#f97316" />
-          <stop offset="100%" stopColor="#ef4444" />
-        </linearGradient>
-      </defs>
-      {/* Hit area — invisible, covers full tube so drag works everywhere */}
-      {onChange && <rect x="4" y={TUBE_TOP} width="20" height={TUBE_H} fill="transparent" />}
-      {/* Tube outline */}
-      <rect x="9" y={TUBE_TOP} width="10" height={TUBE_H} rx="5" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-      {/* Mercury fill */}
-      <rect
-        x="9"
-        y={TUBE_TOP + TUBE_H - pct * TUBE_H / 100}
-        width="10"
-        height={pct * TUBE_H / 100 + 10}
-        rx="5"
-        fill={`url(#${gradId})`}
-        style={{ transition: dragging.current ? "none" : "all 0.25s ease" }}
-      />
-      {/* Bulb */}
-      <circle cx="14" cy="76" r="9" fill={color} style={{ transition: "fill 0.25s ease" }} />
-      <circle cx="14" cy="76" r="5" fill="rgba(255,255,255,0.2)" />
-      {/* Tick marks */}
-      {[0, 25, 50, 75, 100].map((p) => (
-        <line key={p} x1="19" y1={TUBE_TOP + (1 - p / 100) * TUBE_H} x2="22" y2={TUBE_TOP + (1 - p / 100) * TUBE_H} stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-      ))}
-    </svg>
-  );
-}
+type Filter = "all" | SKRating;
 
 export function KnowledgePool() {
   const [sks, setSks] = useState<SpecificKnowledge[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newTemp, setNewTemp] = useState(5);
-  // per-card live temperature (before save) and edit-name state
-  const [liveTemps, setLiveTemps] = useState<Record<number, number>>({});
+  const [newRating, setNewRating] = useState<SKRating>("warm");
   const [editId, setEditId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = () => api.listSKs().then(setSks).catch((e) => setError(String(e)));
   useEffect(() => { load(); }, []);
 
-  const filtered = sks.filter((sk) => {
-    if (filter === "hot") return sk.temperature >= 7;
-    if (filter === "warm") return sk.temperature >= 4 && sk.temperature < 7;
-    if (filter === "cold") return sk.temperature < 4;
-    return true;
-  });
+  const filtered = sks.filter((sk) => filter === "all" || sk.rating === filter);
 
   const addSK = async () => {
     if (!newName.trim()) return;
-    await api.createSK({ name: newName.trim(), temperature: newTemp });
-    setNewName(""); setNewTemp(5); setAdding(false);
+    await api.createSK({ name: newName.trim(), rating: newRating });
+    setNewName(""); setNewRating("warm"); setAdding(false);
     load();
   };
 
-  // Called while dragging the thermometer — update local display immediately,
-  // debounce the API call so we don't spam on every pixel.
-  const onThermoChange = (sk: SpecificKnowledge, t: number) => {
-    setLiveTemps((prev) => ({ ...prev, [sk.id]: t }));
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      api.updateSK(sk.id, { temperature: t }).then(load);
-    }, 400);
+  // Clicking the thermometer is a manual override → the backend marks it finalized.
+  const onRatingChange = (sk: SpecificKnowledge, rating: SKRating) => {
+    setSks((prev) => prev.map((s) => (s.id === sk.id ? { ...s, rating, rating_finalized: true } : s)));
+    api.updateSK(sk.id, { rating }).then(load);
   };
 
   const saveEditName = async (id: number) => {
@@ -157,16 +47,16 @@ export function KnowledgePool() {
 
   const filters: { key: Filter; label: string; color: string }[] = [
     { key: "all", label: "All", color: "#94a3b8" },
-    { key: "hot", label: "Hot (7-10)", color: "#f97316" },
-    { key: "warm", label: "Warm (4-6)", color: "#14b8a6" },
-    { key: "cold", label: "Cold (1-3)", color: "#3b82f6" },
+    { key: "hot", label: "Hot", color: ratingColor("hot") },
+    { key: "warm", label: "Warm", color: ratingColor("warm") },
+    { key: "cold", label: "Cold", color: ratingColor("cold") },
   ];
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Knowledge Pool"
-        subtitle="Every specific knowledge you have assigned to tasks — rated by temperature."
+        subtitle="Every specific knowledge you have earned — rated HOT / WARM / COLD by how unique and not-teachable-elsewhere it is."
       />
 
       {error && <p className="text-amber-400 text-sm">{error}</p>}
@@ -210,14 +100,23 @@ export function KnowledgePool() {
             />
           </div>
           <div>
-            <label className="text-[10px] text-slate-400 uppercase tracking-wider">
-              Temperature: <span style={{ color: tempColor(newTemp) }}>{newTemp}</span>
-            </label>
-            <input
-              type="range" min={1} max={10} value={newTemp}
-              onChange={(e) => setNewTemp(Number(e.target.value))}
-              className="w-32 mt-1 block accent-emerald-500"
-            />
+            <label className="text-[10px] text-slate-400 uppercase tracking-wider">Rating</label>
+            <div className="flex gap-1 mt-1">
+              {RATINGS.map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setNewRating(r)}
+                  className="text-[11px] font-bold px-2.5 py-1 rounded-md border transition-all"
+                  style={{
+                    color: newRating === r ? ratingColor(r) : "#94a3b8",
+                    borderColor: newRating === r ? ratingColor(r) : "rgba(255,255,255,0.12)",
+                    background: newRating === r ? `${ratingColor(r)}18` : "transparent",
+                  }}
+                >
+                  {ratingLabel(r)}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex gap-2">
             <button onClick={addSK} className="btn-primary text-sm">Save</button>
@@ -230,14 +129,13 @@ export function KnowledgePool() {
       {filtered.length === 0 ? (
         <p className="text-slate-500 text-sm italic">
           {sks.length === 0
-            ? "No specific knowledge yet. Assign SKs to tasks to populate this pool."
-            : "No SKs in this temperature range."}
+            ? "No specific knowledge yet. Define SKs on your tasks to populate this pool."
+            : "No SKs in this rating."}
         </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((sk) => {
-            const liveT = liveTemps[sk.id] ?? sk.temperature;
-            const color = tempColor(liveT);
+            const color = ratingColor(sk.rating);
             const isEditing = editId === sk.id;
             return (
               <div
@@ -245,12 +143,9 @@ export function KnowledgePool() {
                 className="rounded-xl border bg-slate-900/70 p-4 flex gap-3 items-start"
                 style={{ borderColor: `${color}33`, transition: "border-color 0.25s" }}
               >
-                {/* Interactive thermometer — drag up/down to set temperature */}
-                <div className="shrink-0 mt-1" title="Drag to set temperature">
-                  <Thermometer
-                    temperature={liveT}
-                    onChange={(t) => onThermoChange(sk, t)}
-                  />
+                {/* Thermometer — click a zone to override the rating */}
+                <div className="shrink-0 mt-1" title="Click to set HOT / WARM / COLD">
+                  <Thermometer rating={sk.rating} onChange={(r) => onRatingChange(sk, r)} />
                 </div>
                 <div className="flex-1 min-w-0">
                   {isEditing ? (
@@ -282,12 +177,17 @@ export function KnowledgePool() {
                           className="text-[11px] font-bold px-2 py-0.5 rounded-full"
                           style={{ color, background: `${color}18`, border: `1px solid ${color}44`, transition: "all 0.25s" }}
                         >
-                          T{liveT} · {tempLabel(liveT)}
+                          {ratingLabel(sk.rating)}
                         </span>
                         <span className="text-[10px] text-slate-500">
                           {sk.task_count} task{sk.task_count !== 1 ? "s" : ""}
                           {sk.completed_count > 0 && ` · ${sk.completed_count} done`}
                         </span>
+                        {!sk.rating_finalized && (
+                          <span className="text-[9px] text-slate-600 italic" title="AI will finalize this on completion">
+                            suggested
+                          </span>
+                        )}
                       </div>
                       {sk.ai_justification && (
                         <p className="text-[10px] text-slate-500 mt-1.5 leading-snug line-clamp-2">

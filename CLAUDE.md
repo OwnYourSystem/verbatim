@@ -6,16 +6,18 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 ## ▶ Resume here (read this first)
 
-**Status:** Phases 1–9 are **done, committed, pushed**. Production is **live on Render + Vercel** (NOT Cloud Run/Cloud SQL — `docs/DEPLOY.md` and `deploy/` are stale from an earlier plan).
+**Status:** Phases 1–9 are **done, committed, pushed**. Production is **live on Google Cloud** (project `mindanchor-500313`, region `europe-north2`) — Cloud Run + Cloud SQL. The authoritative runbook is `docs/DEPLOY.md`; architecture in `docs/DOCUMENTATION.md`.
 
-**⚠ Actual production topology (authoritative — 2026-06-22):**
-- **Backend:** Render web service `mindanchor-api` (`https://mindanchor-api.onrender.com`), Docker from `backend/`, `autoDeploy: true` on push to `main`. Config in `render.yaml`.
-- **Database:** Render managed Postgres `mindanchor-db`. Render's `DATABASE_URL` uses the bare `postgres://` scheme — `config.py` rewrites it to `postgresql+psycopg2://` (SQLAlchemy 2.x rejects the alias; this was the cause of a total 500 outage, fixed in PR #4).
-- **Frontend:** Vercel; `frontend/vercel.json` proxies `/api/*` → the Render backend.
+**⚠ Actual production topology (authoritative — 2026-06-28, from owner's deploy docs):**
+- **Frontend:** Cloud Run `mindanchor-frontend` (`https://mindanchor-frontend-2814170686.europe-north2.run.app`) — React/Vite SPA served by nginx; nginx proxies `/api/*` to the backend server-side (so no CORS hop). **Deployed manually** (no Cloud Build trigger yet).
+- **Backend:** Cloud Run `mindanchor` (`https://mindanchor-p56twm4tsa-ma.a.run.app`), FastAPI/uvicorn, Docker from `backend/`. Auto-deployed from GitHub `main` by a **Cloud Build trigger** (build `backend/Dockerfile` → Artifact Registry → `gcloud run services update`). The deploy step **only swaps the image**, so Cloud Run env vars persist.
+- **Database:** Cloud SQL Postgres `mindanchor-db`, reached via the Cloud SQL connector socket. `config.py` still normalizes a bare `postgres://` `DATABASE_URL` to `postgresql+psycopg2://` (SQLAlchemy 2.x rejects the alias).
 - **Migrations:** applied on startup by the FastAPI lifespan hook in `app/main.py` (`alembic upgrade head`).
-- The `Deploy backend (Render)` CI job is a no-op unless `RENDER_DEPLOY_HOOK_URL` secret is set; Render's `autoDeploy` handles deploys. The `Deploy frontend (Vercel)` CI job fails unless `VERCEL_TOKEN`/`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` secrets are set (Vercel's own GitHub integration also auto-deploys).
+- **⚠ Stale-but-tracked config:** `render.yaml` and `frontend/vercel.json` are from the earlier Render/Vercel plan and are **NOT used** by the live GCP deploy. The GCP setup lives in `deploy/cloudrun.yaml` + `deploy/cloudsql-setup.sh`. `docs/DEPLOY.md` references `frontend/nginx.conf` / frontend `Dockerfile` / root `docker-compose.yml` that are **not yet committed** to the repo.
 
-**Do next:** confirm the live site loads after the PR #4 deploy. Optionally set the Vercel/Render CI secrets (or delete those CI jobs since both platforms auto-deploy). Then Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
+**⚠ Frontend changes don't auto-deploy:** the Cloud Build trigger rebuilds the **backend only**. Merging to `main` will NOT update the live frontend — run the manual frontend deploy in `docs/DEPLOY.md`. For breaking API changes (e.g. CR-2's SK `rating`), deploy **backend first, then frontend**.
+
+**Do next:** CR-2 (SK rating model) is on branch `claude/determined-curie-h90f00` → open/merge PR so the backend auto-deploys + runs migration 0009, then **manually deploy the frontend** for the new SK Universe/Knowledge Pool to appear live. Optionally wire a frontend Cloud Build trigger. Then Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
 
 **Live agent is ON:** `backend/.env` has a real (rotated) key, so `get_llm()`/`get_intake()` use real Claude when the backend runs. Not yet smoke-tested live (needs backend running against local Postgres). Tests stay offline via `tests/conftest.py`.
 
@@ -37,6 +39,17 @@ This file is the working memory for the MindAnchor build. It records **what the 
 - **Frontend build cannot run from the network share:** `npm run <script>` spawns `cmd.exe` which rejects UNC cwd, and `esbuild`'s postinstall fails under UNC (rolls back `node_modules`). To verify the frontend, **copy `frontend/` to a local-disk temp dir** (e.g. `%LOCALAPPDATA%\Temp\mindanchor-fe`), then `npm install` and build by calling node directly: `node node_modules/typescript/bin/tsc -b && node node_modules/vite/bin/vite.js build`. CI (GitHub Actions, ubuntu) builds it normally — no UNC issue there. Last local build: ✅ tsc clean, vite built, PWA SW generated.
 
 **Convention:** end every phase with a `CLAUDE.md` action-log update + commit + push.
+
+---
+
+## Operating model (set by owner 2026-06-28)
+
+How this project is worked on going forward:
+
+- **GitHub is the single source of truth.** All changes land via branches → PRs → merge to `main`. This Claude Code session/env is **ephemeral**: nothing is persisted on it except (a) code, which must be pushed to the repo, and (b) learnings, which must be committed here in `CLAUDE.md`. Treat the local checkout as disposable.
+- **Infra is GCP** for both test and prod (Cloud Run + Cloud SQL). Deploys are **GitHub-driven**: merge to `main` → Cloud Build trigger auto-deploys (backend today; frontend once its trigger is created). No credentials should live on the ephemeral env — the CI/CD is keyless/GitHub-triggered by design.
+- **The repo is multi-user.** Other people clone it and deploy to *their own* GCP projects. Keep everything generic: no machine-specific absolute paths, no secrets, working `SETUP.md`. (The Windows/network-share notes below are the *owner's personal* local-dev quirks, not requirements for others.)
+- **Owner needs deployment visibility from inside the Claude env** to make test/feedback decisions. ⚠ **Current limitation (2026-06-28):** this env has **no `gcloud`, no GCP MCP connector, and its network policy blocks egress to `*.run.app`** (agent proxy returns `403 CONNECT` for the Cloud Run hosts — verified via `$HTTPS_PROXY/__agentproxy/status`). So from here I can read **GitHub** (PRs, CI/commit statuses, Cloud Build statuses posted to GitHub) but **cannot reach the live app or GCP directly**. To enable runtime visibility the owner must, at env-creation time: allow egress to the Cloud Run hosts in the network policy, and/or add a read-only GCP credential or a GCP MCP connector. Until then, report deploy results via GitHub statuses, not by curling the app.
 
 ---
 
@@ -76,6 +89,29 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
 ---
 
 ## Action log
+
+### 2026-06-28 — Deploy-doc reconciliation, frontend deploy infra, multi-user repo + operating model
+
+Follow-ups after CR-2 (all on branch `claude/determined-curie-h90f00`, PR #10):
+
+- **Deploy docs reconciled to GCP.** The repo's docs contradicted each other and reality (`docs/DEPLOY.md`→Railway, `docs/DOCUMENTATION.md`→Render, `CLAUDE.md`→Render+Vercel). Rewrote `docs/DEPLOY.md` (GCP runbook), `docs/DOCUMENTATION.md` (Cloud Run/Cloud SQL topology, migrations 0001→0009), and the `CLAUDE.md` "Resume here" block. Flagged `render.yaml` / `frontend/vercel.json` as stale-but-tracked.
+- **Frontend deploy infra committed** (the live frontend had been deployed from uncommitted infra with no trigger): `frontend/Dockerfile` (node build → nginx on `$PORT`), `frontend/nginx.conf` (envsubst template; proxies `/api/` → `${BACKEND_ORIGIN}` with the prefix stripped to match FastAPI's root-mounted routes; SPA fallback; SW/asset cache headers), `frontend/.dockerignore`, `frontend/cloudbuild.yaml` + the `gcloud builds triggers create` command, root `docker-compose.yml`. ⚠ Image not built here (no docker daemon); `npm run build` passes, nginx template is standard — validate via Cloud Build or `docker compose up --build`.
+- **Repo generalized for multi-user sharing:** new `SETUP.md` (clone → run locally via Docker or manually → self-host on your own GCP), README refreshed (status = live on GCP; hosting = Cloud Run + Cloud SQL; cross-platform Docker quick start; doc index). Secret check: only `backend/.env.example` + `sk-ant-...` placeholders tracked; real `.env` gitignored.
+- **Operating model recorded** (see the new section above): GitHub = single source of truth, ephemeral env, GCP GitHub-driven deploys, multi-user repo, and the current GCP-visibility limitation (no gcloud/GCP MCP, egress to `*.run.app` blocked by the env network policy).
+- **PR #10 opened** (`claude/determined-curie-h90f00` → `main`) and **subscribed** for CI/review autofix. CI note: GitHub Actions `ci.yml` doesn't run on this PR (effectively runs on `main` pushes; `main`'s recent runs fail on deploy jobs that need secrets — pre-existing, not code). Verified locally instead: ruff 0.8.4 clean, 40 tests pass, frontend build OK.
+- **Vercel retired (repo side)** at owner's request: removed the `deploy-frontend (Vercel)` job + the dist-artifact upload step from `ci.yml` (this Vercel job was what made `main`'s CI red — it ran `vercel deploy` with no token), deleted `frontend/vercel.json`, and fixed a stale Vercel CORS example in `config.py`. ⚠ The **Render** deploy job + `render.yaml` were left in place (not requested; the Render CI job is a graceful no-op). ⚠ **Account side is manual — the Vercel MCP connector is read-only (no disconnect/delete tool).** To stop the preview builds + PR comments, the owner must disconnect the repo from the Vercel project `mind-anchor` (`prj_h3t0CSsFtktaN10nSsy5hxmtt3jO`, team `oys-s-projects`) in the Vercel dashboard (Settings → Git → Disconnect), or remove the Vercel GitHub app.
+
+### 2026-06-28 — Change Request 2 (CR-2): coherent SK ER model, 3-level thermometer, 3D universe
+
+Reworked Specific Knowledge (SK), Knowledge Pool, and SK Universe into a coherent, normalized model. Three product decisions were confirmed with the owner first: (1) replace the 1–10 temperature with **3 discrete levels HOT/WARM/COLD**; (2) **AI suggests the rating at setup, finalizes it on completion, user can override**; (3) **normalize the SK↔work-item link into join tables** (real ER, not a JSON id-list).
+
+- **Data model (`models.py`):** new `SKRating` enum (cold/warm/hot). `SpecificKnowledge.temperature` → `rating` (+ `rating_finalized` flag); SKs stay unique by `name`. New association tables `task_specific_knowledge` and `subtask_specific_knowledge` (many-to-many, `ON DELETE CASCADE`) with `Task.specific_knowledges` / `Subtask.specific_knowledges` relationships. Dropped the denormalized `sk_ids` JSON column from `WorkItemMixin`.
+- **Migration `0009_sk_ratings_and_join_tables.py`:** creates the two join tables, adds `rating`/`rating_finalized`, backfills ratings from old temperatures (≥7 hot, ≥4 warm, else cold) and join rows from the old `sk_ids` (Postgres `json_array_elements_text`), then drops `temperature` + `sk_ids`. Verified the full 0001→0009 chain runs clean on SQLite.
+- **Rating lifecycle:** `services.finalize_sks_for_item()` re-runs the AI rater (HOT/WARM/COLD on uniqueness / not-teachable-elsewhere) and locks each attached SK when its Task/Subtask is marked **done** — wired into tasks PATCH/POST and the check-in flow. Manual rating edits via `PUT /specific-knowledges/{id}` set `rating_finalized=True` (override wins). SK enters Knowledge Pool + SK Universe on completion (unchanged semantics, now computed via the relationships).
+- **AI (`agents/llm.py`):** `suggest_sk()` now returns `{name, rating, justification}` with rating coerced to hot/warm/cold (tolerates legacy numeric input); stub + Anthropic prompts updated to the 3-level rubric.
+- **API/schemas:** SK schemas use `rating`; Task/Subtask **reads** expose nested `specific_knowledges`, **writes** accept `sk_ids` (resolved to the relationship). SK list now sorts HOT→WARM→COLD.
+- **Frontend:** shared `components/Thermometer.tsx` (3-zone clickable thermometer + `RatingBadge` + helpers). **Knowledge Pool** rebuilt on the 3 levels with a "suggested" hint until finalized. **SK Universe**: removed the **"YOU"** label, mapped rating → 3 orbit tiers, and made it fully move-around 3D (drag horizontally = orbit/spin, vertically = tilt, scroll = zoom). **WorkItemEditor** gained a Specific-Knowledge section to define/attach SKs while setting up a task/subtask, with an **✨ AI suggest** button.
+- **Tests:** updated `test_new_features` SK tests to the rating model + added a test that an SK attaches to a task and enters the Universe (with finalized rating) on completion. **Verified: ruff (CI-pinned 0.8.4) clean, 40 backend tests pass; frontend tsc clean + vite build OK; migration chain applies on SQLite.**
 
 ### 2026-06-12 — Change Request 1 (CR-1): rich task attributes, time tracking, scrum-master AI, charts
 

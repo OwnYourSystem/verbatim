@@ -71,10 +71,12 @@ spend matter more than maximal autonomy for a personal tool.
 ### 5. A single source of truth, versioned
 The three-level domain model — **System → Task → Subtask** — is the spine of the
 whole app. Schema evolution is managed with **Alembic migrations** (0001 →
-0008), applied automatically on backend startup, so the database shape is
+0009), applied automatically on backend startup, so the database shape is
 reproducible and the production DB is never hand-edited. *Priority inheritance*
 (a subtask's effective priority derives from its System) keeps the model
-normalized: priority lives in one place and cascades.
+normalized: priority lives in one place and cascades. Specific Knowledge is
+linked to work items through normalized join tables (a real many-to-many ER),
+not a denormalized id-list.
 
 ### 6. Stateless API, externalized configuration
 The FastAPI service holds no session state — auth is a **stateless JWT**, so the
@@ -126,7 +128,8 @@ See [`DEPLOY.md`](DEPLOY.md) for the full runbook.
 - **AI** → **Anthropic Claude**, called only on user events.
 
 GitHub is the hub: code flows *in* via commits, and *out* to Cloud Run via Cloud
-Build auto-deploy.
+Build auto-deploy. Note: the Cloud Build trigger deploys the **backend** only;
+the **frontend is deployed manually** (see [`DEPLOY.md`](DEPLOY.md)).
 
 ---
 

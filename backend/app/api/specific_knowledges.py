@@ -6,31 +6,28 @@ from sqlalchemy.orm import Session
 
 from app.agents.llm import suggest_sk
 from app.db import get_db
-from app.models import SpecificKnowledge, Subtask, Task, WorkStatus
+from app.models import SKRating, SpecificKnowledge, Subtask, Task, WorkStatus
 from app.schemas import SKCreate, SKRead, SKSuggestRequest, SKSuggestResponse, SKUpdate
 
 router = APIRouter(prefix="/specific-knowledges", tags=["specific-knowledge"])
 
 
 def _get_universe_and_counts(db: Session) -> tuple[set[int], dict[int, int], dict[int, int]]:
-    """Return (universe_ids, completed_counts, task_counts) for all SKs."""
+    """Return (universe_ids, completed_counts, task_counts) for all SKs.
+
+    An SK enters the Universe (and counts a completion) when any Task or Subtask
+    it is associated with is marked done.
+    """
     universe: set[int] = set()
     completed: dict[int, int] = {}
     total: dict[int, int] = {}
 
-    for task in db.query(Task).all():
-        for sk_id in task.sk_ids or []:
-            total[sk_id] = total.get(sk_id, 0) + 1
-            if task.status == WorkStatus.done:
-                completed[sk_id] = completed.get(sk_id, 0) + 1
-                universe.add(sk_id)
-
-    for subtask in db.query(Subtask).all():
-        for sk_id in subtask.sk_ids or []:
-            total[sk_id] = total.get(sk_id, 0) + 1
-            if subtask.status == WorkStatus.done:
-                completed[sk_id] = completed.get(sk_id, 0) + 1
-                universe.add(sk_id)
+    for item in (*db.query(Task).all(), *db.query(Subtask).all()):
+        for sk in item.specific_knowledges:
+            total[sk.id] = total.get(sk.id, 0) + 1
+            if item.status == WorkStatus.done:
+                completed[sk.id] = completed.get(sk.id, 0) + 1
+                universe.add(sk.id)
 
     return universe, completed, total
 
@@ -48,10 +45,15 @@ def _enrich(
     return r
 
 
+# Sort order for the rating: hottest (rarest) first.
+_RATING_RANK = {SKRating.hot: 0, SKRating.warm: 1, SKRating.cold: 2}
+
+
 @router.get("", response_model=list[SKRead])
 def list_sks(db: Session = Depends(get_db)):
     universe, completed, total = _get_universe_and_counts(db)
-    sks = db.query(SpecificKnowledge).order_by(SpecificKnowledge.temperature.desc()).all()
+    sks = db.query(SpecificKnowledge).all()
+    sks.sort(key=lambda sk: (_RATING_RANK.get(sk.rating, 1), sk.name.lower()))
     return [_enrich(sk, universe, completed, total) for sk in sks]
 
 
@@ -74,7 +76,12 @@ def update_sk(sk_id: int, body: SKUpdate, db: Session = Depends(get_db)):
     sk = db.get(SpecificKnowledge, sk_id)
     if not sk:
         raise HTTPException(404, "SK not found")
-    for field, val in body.model_dump(exclude_none=True).items():
+    data = body.model_dump(exclude_none=True)
+    # A manual rating change is an override → lock it so completion won't redo it,
+    # unless the caller explicitly says otherwise.
+    if "rating" in data and "rating_finalized" not in data:
+        data["rating_finalized"] = True
+    for field, val in data.items():
         setattr(sk, field, val)
     db.commit()
     db.refresh(sk)

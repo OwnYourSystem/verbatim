@@ -11,6 +11,7 @@ import type {
   ReadingItem,
   RebalanceProposal,
   Report,
+  SKRating,
   SKSuggestResponse,
   SpecificKnowledge,
   Subtask,
@@ -181,9 +182,9 @@ export const api = {
 
   // Specific Knowledge
   listSKs: () => request<SpecificKnowledge[]>("/specific-knowledges"),
-  createSK: (body: { name: string; temperature: number; ai_justification?: string }) =>
+  createSK: (body: { name: string; rating?: SKRating; ai_justification?: string }) =>
     request<SpecificKnowledge>("/specific-knowledges", { method: "POST", body: JSON.stringify(body) }),
-  updateSK: (id: number, body: { name?: string; temperature?: number }) =>
+  updateSK: (id: number, body: { name?: string; rating?: SKRating; rating_finalized?: boolean }) =>
     request<SpecificKnowledge>(`/specific-knowledges/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteSK: (id: number) =>
     request<void>(`/specific-knowledges/${id}`, { method: "DELETE" }),

@@ -46,20 +46,23 @@ def test_specific_knowledge_crud_and_universe():
 
     created = client.post(
         "/specific-knowledges",
-        json={"name": "Rare GPU kernel tuning", "temperature": 9},
+        json={"name": "Rare GPU kernel tuning", "rating": "hot"},
     )
     assert created.status_code in (200, 201)
-    sk_id = created.json()["id"]
+    body = created.json()
+    sk_id = body["id"]
+    assert body["rating"] == "hot"
+    assert body["in_universe"] is False  # nothing completed yet
 
     listed = client.get("/specific-knowledges")
     assert listed.status_code == 200
     assert any(s["id"] == sk_id for s in listed.json())
 
-    updated = client.put(
-        f"/specific-knowledges/{sk_id}", json={"temperature": 3}
-    )
+    # Manual rating override marks the SK as finalized.
+    updated = client.put(f"/specific-knowledges/{sk_id}", json={"rating": "cold"})
     assert updated.status_code == 200
-    assert updated.json()["temperature"] == 3
+    assert updated.json()["rating"] == "cold"
+    assert updated.json()["rating_finalized"] is True
 
     assert client.delete(f"/specific-knowledges/{sk_id}").status_code in (200, 204)
 
@@ -71,7 +74,38 @@ def test_specific_knowledge_suggest_offline():
     )
     assert res.status_code == 200
     body = res.json()
-    assert "name" in body and "temperature" in body
+    assert "name" in body
+    assert body["rating"] in {"hot", "warm", "cold"}
+
+
+def test_sk_attaches_to_task_and_enters_universe_on_complete():
+    """SK ↔ Task is a real association; completing the task adds the SK to the
+    Universe and finalizes its AI rating."""
+    system = client.post("/systems", json={"name": "Knowledge System"}).json()
+    sk = client.post(
+        "/specific-knowledges",
+        json={"name": "Proprietary SAP BTP wiring", "rating": "warm"},
+    ).json()
+
+    # Define the SK while setting up the task.
+    task = client.post(
+        "/tasks",
+        json={"system_id": system["id"], "title": "Ship the integration", "sk_ids": [sk["id"]]},
+    ).json()
+    assert [s["id"] for s in task["specific_knowledges"]] == [sk["id"]]
+
+    # Before completion: linked but not yet in the Universe.
+    before = {s["id"]: s for s in client.get("/specific-knowledges").json()}
+    assert before[sk["id"]]["task_count"] == 1
+    assert before[sk["id"]]["in_universe"] is False
+    assert before[sk["id"]]["rating_finalized"] is False
+
+    # Completing the task pulls the SK into the Universe and finalizes its rating.
+    client.patch(f"/tasks/{task['id']}", json={"status": "done"})
+    after = {s["id"]: s for s in client.get("/specific-knowledges").json()}
+    assert after[sk["id"]]["in_universe"] is True
+    assert after[sk["id"]]["completed_count"] == 1
+    assert after[sk["id"]]["rating_finalized"] is True
 
 
 # ── Check Out ASAP (reading items) ────────────────────────────────────────────
