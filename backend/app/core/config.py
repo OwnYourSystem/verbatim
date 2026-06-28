@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     model_planning: str = "claude-opus-4-8"
     model_fast: str = "claude-sonnet-4-6"
 
-    # CORS — comma-separated in env: CORS_ORIGINS=https://mindanchor.vercel.app,https://custom.domain
+    # CORS — comma-separated in env: CORS_ORIGINS=https://mindanchor-frontend-xxxx.run.app,https://custom.domain
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     @field_validator("database_url", mode="before")
