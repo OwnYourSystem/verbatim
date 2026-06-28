@@ -12,9 +12,45 @@ from datetime import date, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Priority, Subtask, System, SystemStatus, Task, WorkStatus
+from app.models import (
+    Priority,
+    SKRating,
+    Subtask,
+    System,
+    SystemStatus,
+    Task,
+    WorkStatus,
+)
 
 logger = logging.getLogger("mindanchor.events")
+
+
+# ---------------------------------------------------------------------------
+# Specific-Knowledge rating finalization (decision: AI suggests at setup,
+# finalizes on Complete, user can override).
+# ---------------------------------------------------------------------------
+def finalize_sks_for_item(db: Session, item: Task | Subtask) -> None:
+    """When a Task/Subtask is completed, lock in the AI's uniqueness judgement
+    for each attached Specific Knowledge that the user hasn't already finalized.
+
+    Re-runs the AI rater (HOT/WARM/COLD) on the work item's title + description.
+    Best-effort and offline-safe: the stub rater is used when no API key is set,
+    so this never blocks completion. A user override (`rating_finalized=True`)
+    is respected and left untouched.
+    """
+    # Imported here to avoid a circular import (agents.llm imports config only).
+    from app.agents.llm import suggest_sk
+
+    for sk in item.specific_knowledges:
+        if sk.rating_finalized:
+            continue
+        try:
+            result = suggest_sk(item.title, item.description or "")
+            sk.rating = SKRating(result["rating"])
+            sk.ai_justification = result.get("justification") or sk.ai_justification
+        except Exception:
+            logger.warning("SK finalize failed for sk=%s; keeping prior rating", sk.id)
+        sk.rating_finalized = True
 
 
 def current_year_month(today: date | None = None) -> tuple[int, int]:

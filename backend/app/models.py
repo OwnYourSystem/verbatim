@@ -13,6 +13,7 @@ from datetime import date, datetime, time
 from sqlalchemy import (
     JSON,
     Boolean,
+    Column,
     Date,
     DateTime,
     Enum,
@@ -20,6 +21,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Table,
     Text,
     Time,
     UniqueConstraint,
@@ -47,6 +49,53 @@ class ProposalStatus(enum.StrEnum):
     pending = "pending"
     approved = "approved"
     rejected = "rejected"
+
+
+class SKRating(enum.StrEnum):
+    """Three-level rarity rating for a Specific Knowledge.
+
+    The AI decides how unique / not-teachable-elsewhere the knowledge is and
+    rates it on a single thermometer: cold (teachable) → warm → hot (unique).
+    """
+
+    cold = "cold"
+    warm = "warm"
+    hot = "hot"
+
+
+# ── Specific-Knowledge association tables (normalized many-to-many) ────────────
+# A Task (or Subtask) has 1..* Specific Knowledges; an SK is unique and can be
+# shared across work items. These join tables make that a real relational link
+# instead of a denormalized JSON id-list.
+task_specific_knowledge = Table(
+    "task_specific_knowledge",
+    Base.metadata,
+    Column(
+        "task_id",
+        ForeignKey("tasks.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "sk_id",
+        ForeignKey("specific_knowledges.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
+
+subtask_specific_knowledge = Table(
+    "subtask_specific_knowledge",
+    Base.metadata,
+    Column(
+        "subtask_id",
+        ForeignKey("subtasks.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "sk_id",
+        ForeignKey("specific_knowledges.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
 
 
 class TimestampMixin:
@@ -88,7 +137,6 @@ class WorkItemMixin:
     # is derived in services.build_today; this column is the manual counterpart.
     flagged: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    sk_ids: Mapped[list[int]] = mapped_column(JSON, default=list, nullable=False)
 
 
 class System(TimestampMixin, Base):
@@ -157,6 +205,9 @@ class Task(WorkItemMixin, TimestampMixin, Base):
     time_logs: Mapped[list[TimeLog]] = relationship(
         back_populates="task", cascade="all, delete-orphan"
     )
+    specific_knowledges: Mapped[list[SpecificKnowledge]] = relationship(
+        secondary=task_specific_knowledge, back_populates="tasks"
+    )
 
 
 class Subtask(WorkItemMixin, TimestampMixin, Base):
@@ -173,6 +224,9 @@ class Subtask(WorkItemMixin, TimestampMixin, Base):
     task: Mapped[Task] = relationship(back_populates="subtasks")
     time_logs: Mapped[list[TimeLog]] = relationship(
         back_populates="subtask", cascade="all, delete-orphan"
+    )
+    specific_knowledges: Mapped[list[SpecificKnowledge]] = relationship(
+        secondary=subtask_specific_knowledge, back_populates="subtasks"
     )
 
 
@@ -294,14 +348,36 @@ class RebalanceProposal(TimestampMixin, Base):
 
 
 class SpecificKnowledge(TimestampMixin, Base):
-    """A named skill/knowledge item with a rarity temperature (1=cold/teachable, 10=hot/unique)."""
+    """A unique named skill/knowledge item with a 3-level rarity rating.
+
+    The AI judges how unique and not-teachable-elsewhere the knowledge is and
+    rates it COLD / WARM / HOT on a single thermometer. The rating is suggested
+    when the SK is defined on a Task/Subtask, finalized (re-evaluated) when that
+    work item is completed, and may be overridden manually at any time.
+    """
 
     __tablename__ = "specific_knowledges"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False, unique=True)
-    temperature: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    rating: Mapped[SKRating] = mapped_column(
+        Enum(SKRating, native_enum=False, length=10),
+        nullable=False,
+        default=SKRating.warm,
+    )
+    # True once the owning work item has been completed and the AI has locked in
+    # its uniqueness judgement. Until then the rating is a setup-time suggestion.
+    rating_finalized: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
     ai_justification: Mapped[str | None] = mapped_column(Text)
+
+    tasks: Mapped[list[Task]] = relationship(
+        secondary=task_specific_knowledge, back_populates="specific_knowledges"
+    )
+    subtasks: Mapped[list[Subtask]] = relationship(
+        secondary=subtask_specific_knowledge, back_populates="specific_knowledges"
+    )
 
 
 class ReadingItem(TimestampMixin, Base):

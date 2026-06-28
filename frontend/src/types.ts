@@ -31,6 +31,8 @@ export interface WorkItemFields {
   required_demo: boolean;
   flagged: boolean;
   position: number;
+  // Specific Knowledges associated with this work item (read-only; set via sk_ids).
+  specific_knowledges: SpecificKnowledge[];
   // server-computed, read-only
   spent_hours: number;
   remaining_hours: number;
@@ -66,6 +68,7 @@ export type WorkItemInput = Partial<{
   required_demo: boolean;
   flagged: boolean;
   position: number;
+  sk_ids: number[];
 }>;
 
 export interface TimeLog {
@@ -235,10 +238,13 @@ export interface Report {
   charts: Chart[];
 }
 
+export type SKRating = "hot" | "warm" | "cold";
+
 export interface SpecificKnowledge {
   id: number;
   name: string;
-  temperature: number;
+  rating: SKRating;
+  rating_finalized: boolean;
   ai_justification: string | null;
   in_universe: boolean;
   completed_count: number;
@@ -247,7 +253,7 @@ export interface SpecificKnowledge {
 
 export interface SKSuggestResponse {
   name: string;
-  temperature: number;
+  rating: SKRating;
   justification: string;
 }
 

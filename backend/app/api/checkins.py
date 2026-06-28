@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import CheckIn, Task, WorkStatus
 from app.schemas import CheckInCreate, CheckInRead
-from app.services import emit_event
+from app.services import emit_event, finalize_sks_for_item
 
 router = APIRouter(prefix="/check-ins", tags=["check-ins"])
 
@@ -28,7 +28,10 @@ def create_check_in(payload: CheckInCreate, db: Session = Depends(get_db)):
     for task_id in payload.completed_task_ids:
         task = db.get(Task, task_id)
         if task is not None:
+            was_done = task.status == WorkStatus.done
             task.status = WorkStatus.done
+            if not was_done:
+                finalize_sks_for_item(db, task)
             completed.append(task_id)
 
     check_in = CheckIn(

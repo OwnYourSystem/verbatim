@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Subtask, System, Task, TimeLog
+from app.models import SpecificKnowledge, Subtask, System, Task, TimeLog, WorkStatus
 from app.schemas import (
     SubtaskCreate,
     SubtaskRead,
@@ -23,9 +23,26 @@ from app.schemas import (
     TimeLogCreate,
     TimeLogRead,
 )
-from app.services import computed_fields, emit_event, get_inherited_priority
+from app.services import (
+    computed_fields,
+    emit_event,
+    finalize_sks_for_item,
+    get_inherited_priority,
+)
 
 router = APIRouter(tags=["tasks"])
+
+
+def _apply_sk_ids(db: Session, item: Task | Subtask, sk_ids: list[int]) -> None:
+    """Replace the work item's Specific-Knowledge associations with `sk_ids`."""
+    sks = (
+        db.query(SpecificKnowledge)
+        .filter(SpecificKnowledge.id.in_(sk_ids))
+        .all()
+        if sk_ids
+        else []
+    )
+    item.specific_knowledges = sks
 
 
 # ---- read builders (attach computed fields) ----
@@ -55,10 +72,17 @@ def list_tasks(system_id: int | None = None, db: Session = Depends(get_db)):
 def create_task(payload: TaskCreate, db: Session = Depends(get_db)):
     if not db.get(System, payload.system_id):
         raise HTTPException(404, "System not found")
-    task = Task(**payload.model_dump())
+    data = payload.model_dump()
+    sk_ids = data.pop("sk_ids", [])
+    task = Task(**data)
+    _apply_sk_ids(db, task, sk_ids)
     db.add(task)
     db.commit()
     db.refresh(task)
+    if task.status == WorkStatus.done:
+        finalize_sks_for_item(db, task)
+        db.commit()
+        db.refresh(task)
     emit_event("task.created", {"task_id": task.id, "system_id": task.system_id})
     return _task_read(task)
 
@@ -79,8 +103,15 @@ def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)
     data = payload.model_dump(exclude_unset=True)
     if "system_id" in data and not db.get(System, data["system_id"]):
         raise HTTPException(404, "Target system not found")
+    was_done = task.status == WorkStatus.done
+    sk_ids = data.pop("sk_ids", None)
     for key, value in data.items():
         setattr(task, key, value)
+    if sk_ids is not None:
+        _apply_sk_ids(db, task, sk_ids)
+    # Completing the task finalizes its SK ratings (AI locks in uniqueness).
+    if task.status == WorkStatus.done and not was_done:
+        finalize_sks_for_item(db, task)
     db.commit()
     db.refresh(task)
     emit_event("task.updated", {"task_id": task.id, "system_id": task.system_id})
@@ -114,10 +145,17 @@ def create_subtask(payload: SubtaskCreate, db: Session = Depends(get_db)):
     parent = db.get(Task, payload.task_id)
     if not parent:
         raise HTTPException(404, "Parent task not found")
-    subtask = Subtask(**payload.model_dump())
+    data = payload.model_dump()
+    sk_ids = data.pop("sk_ids", [])
+    subtask = Subtask(**data)
+    _apply_sk_ids(db, subtask, sk_ids)
     db.add(subtask)
     db.commit()
     db.refresh(subtask)
+    if subtask.status == WorkStatus.done:
+        finalize_sks_for_item(db, subtask)
+        db.commit()
+        db.refresh(subtask)
     emit_event("subtask.created", {"subtask_id": subtask.id, "task_id": subtask.task_id})
     return _subtask_read(db, subtask)
 
@@ -130,8 +168,14 @@ def update_subtask(subtask_id: int, payload: SubtaskUpdate, db: Session = Depend
     data = payload.model_dump(exclude_unset=True)
     if "task_id" in data and not db.get(Task, data["task_id"]):
         raise HTTPException(404, "Target task not found")
+    was_done = subtask.status == WorkStatus.done
+    sk_ids = data.pop("sk_ids", None)
     for key, value in data.items():
         setattr(subtask, key, value)
+    if sk_ids is not None:
+        _apply_sk_ids(db, subtask, sk_ids)
+    if subtask.status == WorkStatus.done and not was_done:
+        finalize_sks_for_item(db, subtask)
     db.commit()
     db.refresh(subtask)
     emit_event("subtask.updated", {"subtask_id": subtask.id, "task_id": subtask.task_id})

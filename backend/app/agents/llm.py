@@ -250,25 +250,47 @@ _COLD_KEYWORDS = {
 }
 
 
+_VALID_RATINGS = {"cold", "warm", "hot"}
+
+
+def _coerce_rating(value: object) -> str:
+    """Map any model/legacy output to one of cold/warm/hot.
+
+    Accepts the 3-level strings directly, and also tolerates a legacy 1-10
+    numeric temperature so older callers/data degrade gracefully.
+    """
+    if isinstance(value, str):
+        v = value.strip().lower()
+        if v in _VALID_RATINGS:
+            return v
+    if isinstance(value, int | float):
+        if value >= 7:
+            return "hot"
+        if value >= 4:
+            return "warm"
+        return "cold"
+    return "warm"
+
+
 def _stub_suggest_sk(title: str, description: str) -> dict:
     text = (title + " " + description).lower()
-    temperature = 5
+    rating = "warm"
     for kw in _HOT_KEYWORDS:
         if kw in text:
-            temperature = 8
+            rating = "hot"
             break
     for kw in _COLD_KEYWORDS:
         if kw in text:
-            temperature = 3
+            rating = "cold"
             break
     words = [w for w in title.split() if len(w) > 3][:4]
     name = " ".join(words).title() if words else title[:30].title()
     return {
         "name": name,
-        "temperature": temperature,
+        "rating": rating,
         "justification": (
-            "Estimated based on task domain keywords. "
-            "Hot skills are rare and not easily replicated; cold skills are teachable."
+            "Estimated from task domain keywords. HOT knowledge is unique and "
+            "not teachable elsewhere; COLD knowledge is textbook and widely available."
         ),
     }
 
@@ -283,9 +305,12 @@ def _anthropic_suggest_sk(title: str, description: str, api_key: str, model: str
         "Identify the ONE most valuable specific knowledge earned by completing this task.\n"
         "Rules:\n"
         "- Name it in 2-5 words (e.g. 'SAP BTP Architecture', 'Contract Negotiation')\n"
-        "- Temperature 1-10: 1=cold (textbook/teachable), 10=blazing hot (unique/premium)\n"
+        "- Rate how UNIQUE and NOT-TEACHABLE-ELSEWHERE the knowledge is, as one of:\n"
+        "    HOT  = rare, proprietary, hard to replicate, premium\n"
+        "    WARM = moderately specialized\n"
+        "    COLD = textbook, widely teachable, commodity\n"
         "- One-sentence justification\n"
-        'Return ONLY valid JSON: {"name":"...","temperature":<int>,"justification":"..."}'
+        'Return ONLY valid JSON: {"name":"...","rating":"hot|warm|cold","justification":"..."}'
     )
     msg = client.messages.create(
         model=model,
@@ -293,17 +318,21 @@ def _anthropic_suggest_sk(title: str, description: str, api_key: str, model: str
         messages=[{"role": "user", "content": prompt}],
     )
     raw = msg.content[0].text.strip()
-    return _extract_json(raw)
+    data = _extract_json(raw)
+    data["rating"] = _coerce_rating(data.get("rating", data.get("temperature")))
+    return data
 
 
 def suggest_sk(title: str, description: str) -> dict:
-    """Suggest an SK name + temperature. Auto-selects stub vs real Claude."""
+    """Suggest an SK name + HOT/WARM/COLD rating. Auto-selects stub vs real Claude."""
     settings = get_settings()
     if settings.anthropic_api_key:
         try:
-            return _anthropic_suggest_sk(
+            result = _anthropic_suggest_sk(
                 title, description, settings.anthropic_api_key, settings.model_fast
             )
+            result["rating"] = _coerce_rating(result.get("rating"))
+            return result
         except Exception:
             pass
     return _stub_suggest_sk(title, description)

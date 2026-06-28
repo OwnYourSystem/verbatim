@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models import ProposalStatus, SystemStatus, WorkStatus
+from app.models import ProposalStatus, SKRating, SystemStatus, WorkStatus
 
 
 class _ORM(BaseModel):
@@ -78,7 +78,6 @@ class WorkItemBase(BaseModel):
     required_demo: bool = False
     flagged: bool = False  # user-raised "needs attention" flag
     position: int = 0
-    sk_ids: list[int] = Field(default_factory=list)
 
 
 class WorkItemUpdate(BaseModel):
@@ -109,6 +108,8 @@ class _Computed(BaseModel):
 # ---- Task ----
 class TaskCreate(WorkItemBase):
     system_id: int
+    # IDs of Specific Knowledges to associate (defined while setting up the task).
+    sk_ids: list[int] = Field(default_factory=list)
 
 
 class TaskUpdate(WorkItemUpdate):
@@ -119,6 +120,7 @@ class TaskRead(_ORM, WorkItemBase, _Computed):
     id: int
     system_id: int
     system_name: str | None = None  # filled by endpoint
+    specific_knowledges: list[SKRead] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 
@@ -126,6 +128,7 @@ class TaskRead(_ORM, WorkItemBase, _Computed):
 # ---- Subtask ----
 class SubtaskCreate(WorkItemBase):
     task_id: int
+    sk_ids: list[int] = Field(default_factory=list)
 
 
 class SubtaskUpdate(WorkItemUpdate):
@@ -135,6 +138,7 @@ class SubtaskUpdate(WorkItemUpdate):
 class SubtaskRead(_ORM, WorkItemBase, _Computed):
     id: int
     task_id: int
+    specific_knowledges: list[SKRead] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
     inherited_priority: int | None = None  # System monthly priority (filled by endpoint)
@@ -449,20 +453,23 @@ class TodayView(BaseModel):
 # ---- Specific Knowledge ----
 class SKCreate(BaseModel):
     name: str
-    temperature: int = Field(ge=1, le=10, default=5)
+    rating: SKRating = SKRating.warm
     ai_justification: str | None = None
 
 
 class SKUpdate(BaseModel):
     name: str | None = None
-    temperature: int | None = Field(default=None, ge=1, le=10)
+    rating: SKRating | None = None
+    # Setting the rating manually counts as an override → marks it finalized.
+    rating_finalized: bool | None = None
     ai_justification: str | None = None
 
 
 class SKRead(_ORM):
     id: int
     name: str
-    temperature: int
+    rating: SKRating
+    rating_finalized: bool = False
     ai_justification: str | None = None
     in_universe: bool = False
     completed_count: int = 0
@@ -476,7 +483,7 @@ class SKSuggestRequest(BaseModel):
 
 class SKSuggestResponse(BaseModel):
     name: str
-    temperature: int
+    rating: SKRating
     justification: str
 
 
@@ -568,3 +575,9 @@ class AIProjectAssist(BaseModel):
     target_audience: str
     monetization_model: str
     justification: str
+
+
+# TaskRead / SubtaskRead reference SKRead (defined later); resolve those
+# forward references now that every schema in this module exists.
+TaskRead.model_rebuild()
+SubtaskRead.model_rebuild()

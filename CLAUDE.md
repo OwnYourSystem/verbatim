@@ -77,6 +77,18 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
 
 ## Action log
 
+### 2026-06-28 — Change Request 2 (CR-2): coherent SK ER model, 3-level thermometer, 3D universe
+
+Reworked Specific Knowledge (SK), Knowledge Pool, and SK Universe into a coherent, normalized model. Three product decisions were confirmed with the owner first: (1) replace the 1–10 temperature with **3 discrete levels HOT/WARM/COLD**; (2) **AI suggests the rating at setup, finalizes it on completion, user can override**; (3) **normalize the SK↔work-item link into join tables** (real ER, not a JSON id-list).
+
+- **Data model (`models.py`):** new `SKRating` enum (cold/warm/hot). `SpecificKnowledge.temperature` → `rating` (+ `rating_finalized` flag); SKs stay unique by `name`. New association tables `task_specific_knowledge` and `subtask_specific_knowledge` (many-to-many, `ON DELETE CASCADE`) with `Task.specific_knowledges` / `Subtask.specific_knowledges` relationships. Dropped the denormalized `sk_ids` JSON column from `WorkItemMixin`.
+- **Migration `0009_sk_ratings_and_join_tables.py`:** creates the two join tables, adds `rating`/`rating_finalized`, backfills ratings from old temperatures (≥7 hot, ≥4 warm, else cold) and join rows from the old `sk_ids` (Postgres `json_array_elements_text`), then drops `temperature` + `sk_ids`. Verified the full 0001→0009 chain runs clean on SQLite.
+- **Rating lifecycle:** `services.finalize_sks_for_item()` re-runs the AI rater (HOT/WARM/COLD on uniqueness / not-teachable-elsewhere) and locks each attached SK when its Task/Subtask is marked **done** — wired into tasks PATCH/POST and the check-in flow. Manual rating edits via `PUT /specific-knowledges/{id}` set `rating_finalized=True` (override wins). SK enters Knowledge Pool + SK Universe on completion (unchanged semantics, now computed via the relationships).
+- **AI (`agents/llm.py`):** `suggest_sk()` now returns `{name, rating, justification}` with rating coerced to hot/warm/cold (tolerates legacy numeric input); stub + Anthropic prompts updated to the 3-level rubric.
+- **API/schemas:** SK schemas use `rating`; Task/Subtask **reads** expose nested `specific_knowledges`, **writes** accept `sk_ids` (resolved to the relationship). SK list now sorts HOT→WARM→COLD.
+- **Frontend:** shared `components/Thermometer.tsx` (3-zone clickable thermometer + `RatingBadge` + helpers). **Knowledge Pool** rebuilt on the 3 levels with a "suggested" hint until finalized. **SK Universe**: removed the **"YOU"** label, mapped rating → 3 orbit tiers, and made it fully move-around 3D (drag horizontally = orbit/spin, vertically = tilt, scroll = zoom). **WorkItemEditor** gained a Specific-Knowledge section to define/attach SKs while setting up a task/subtask, with an **✨ AI suggest** button.
+- **Tests:** updated `test_new_features` SK tests to the rating model + added a test that an SK attaches to a task and enters the Universe (with finalized rating) on completion. **Verified: ruff (CI-pinned 0.8.4) clean, 40 backend tests pass; frontend tsc clean + vite build OK; migration chain applies on SQLite.**
+
 ### 2026-06-12 — Change Request 1 (CR-1): rich task attributes, time tracking, scrum-master AI, charts
 
 Implemented the first testing-phase change request end-to-end:
