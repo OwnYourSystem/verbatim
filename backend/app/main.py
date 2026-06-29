@@ -14,6 +14,7 @@ from app.api import (
     dashboard,
     intake,
     pains,
+    product_dev,
     reading,
     rebalance,
     reports,
@@ -99,6 +100,7 @@ app.include_router(reports.router, dependencies=_auth)
 app.include_router(specific_knowledges.router, dependencies=_auth)
 app.include_router(reading.router, dependencies=_auth)
 app.include_router(pains.router, dependencies=_auth)
+app.include_router(product_dev.router, dependencies=_auth)
 
 
 @app.get("/", tags=["meta"])
