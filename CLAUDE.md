@@ -6,18 +6,19 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 ## ▶ Resume here (read this first)
 
-**Status:** Phases 1–9 + CR-2 (SK ratings) + CR-3 (Product Dev) are **done**. CR-2 is **live in production**. CR-3 is on branch `product-dev` (PR open → awaiting merge). Production is **live on Google Cloud** (project `mindanchor-500313`, region `europe-north2`) — Cloud Run + Cloud SQL. The authoritative runbook is `docs/DEPLOY.md`; architecture in `docs/DOCUMENTATION.md`.
+**Status:** Phases 1–9 + CR-2 (SK ratings) + CR-3 (Product Dev) are **done and live in production**. Production is **live on Google Cloud** (project `mindanchor-500313`, region `europe-north2`) — Cloud Run + Cloud SQL. The authoritative runbook is `docs/DEPLOY.md`; architecture in `docs/DOCUMENTATION.md`.
 
 **⚠ Actual production topology (authoritative — 2026-06-29):**
-- **Frontend:** Cloud Run `mindanchor-frontend` (`https://mindanchor-frontend-2814170686.europe-north2.run.app`) — React/Vite SPA served by nginx; nginx proxies `/api/*` to the backend server-side (so no CORS hop). **Deployed manually** (no Cloud Build trigger yet). Last deployed: revision `mindanchor-frontend-00002-54n` (CR-2, 2026-06-28).
-- **Backend:** Cloud Run `mindanchor` (`https://mindanchor-p56twm4tsa-ma.a.run.app`), FastAPI/uvicorn, Docker from `backend/`. Auto-deployed from GitHub `main` by a **Cloud Build trigger**. Last deployed: revision `mindanchor-00012-kc7` (CR-2, 2026-06-28). Merging CR-3 PR to `main` will trigger a new revision.
-- **Database:** Cloud SQL Postgres `mindanchor-db`, reached via the Cloud SQL connector socket. `config.py` normalizes bare `postgres://` to `postgresql+psycopg2://`. Migration chain: 0001→0009 live in prod; migration 0010 will apply automatically on next backend deploy.
+- **Frontend:** Cloud Run `mindanchor-frontend` (`https://mindanchor-frontend-2814170686.europe-north2.run.app`) — React/Vite SPA served by nginx; nginx proxies `/api/*` to the backend server-side (so no CORS hop). **Auto-deployed** via Cloud Build trigger `mindanchor-frontend` (fires on `frontend/**` changes to `main`). Last deployed: revision `mindanchor-frontend-00005-xsx` (CR-3 + nginx envsubst fix, 2026-06-29).
+- **Backend:** Cloud Run `mindanchor` (`https://mindanchor-p56twm4tsa-ma.a.run.app`), FastAPI/uvicorn, Docker from `backend/`. Auto-deployed from GitHub `main` by a **Cloud Build trigger**. Last deployed: revision after CR-3 merge (migration 0010 applied on startup).
+- **Database:** Cloud SQL Postgres `mindanchor-db`, reached via the Cloud SQL connector socket. `config.py` normalizes bare `postgres://` to `postgresql+psycopg2://`. Migration chain: 0001→0010 live in prod.
 - **Migrations:** applied on startup by the FastAPI lifespan hook in `app/main.py` (`alembic upgrade head`).
-- **Stale-but-tracked config:** `render.yaml` is from the earlier Render plan (not used). `frontend/vercel.json` deleted. GCP setup: `deploy/cloudrun.yaml` + `deploy/cloudsql-setup.sh`. Frontend infra (`frontend/Dockerfile`, `nginx.conf`, `cloudbuild.yaml`, root `docker-compose.yml`) committed.
+- **Stale-but-tracked config:** `render.yaml` is from the earlier Render plan (not used). GCP setup: `deploy/cloudrun.yaml` + `deploy/cloudsql-setup.sh`. Frontend infra (`frontend/Dockerfile`, `nginx.conf`, `cloudbuild.yaml`, root `docker-compose.yml`) committed.
+- **nginx envsubst fix (PR #12):** `NGINX_ENVSUBST_TEMPLATE_VARS` added to `frontend/Dockerfile` — prevents nginx:alpine from wiping its own runtime variables during envsubst template processing.
 
-**⚠ Frontend changes don't auto-deploy:** the Cloud Build trigger rebuilds the **backend only**. After merging CR-3, run the manual frontend deploy (`docs/DEPLOY.md`). A frontend Cloud Build trigger (`frontend/cloudbuild.yaml`) is ready to wire — command in `docs/DEPLOY.md` — but requires explicit user approval.
+**Both frontend and backend now auto-deploy on push to `main`.** No manual deploy steps needed going forward.
 
-**Do next:** (1) Merge `product-dev` PR → backend auto-deploys + migration 0010 runs. (2) Manually deploy frontend (CR-3 adds Product Dev nav link). (3) Smoke-test the full flow: Wall of Pains → create project → Product Dev → sprints + stories. (4) Optionally wire the frontend Cloud Build trigger (user approval needed). (5) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
+**Do next:** (1) Smoke-test the full Product Dev flow: Wall of Pains → create project → Product Dev → sprints + stories. (2) Close PR #13 (GitHub Actions manual deploy workflow — superseded by the Cloud Build trigger). (3) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
 
 **Live agent is ON:** `backend/.env` has a real (rotated) key, so `get_llm()`/`get_intake()` use real Claude when the backend runs. Not yet smoke-tested live (needs backend running against local Postgres). Tests stay offline via `tests/conftest.py`.
 
