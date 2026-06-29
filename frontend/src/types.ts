@@ -316,3 +316,53 @@ export interface AIProjectAssist {
   monetization_model: MonetizationModel;
   justification: string;
 }
+
+// ── Product Development (Scrum) ──────────────────────────────────────────────
+
+export type StoryType = "epic" | "story" | "task" | "bug";
+export type StoryStatus = "backlog" | "todo" | "doing" | "review" | "done";
+export type SprintStatus = "planning" | "active" | "review" | "closed";
+
+export interface Sprint {
+  id: number;
+  pain_project_id: number;
+  number: number;
+  goal: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  status: SprintStatus;
+  story_count: number;
+  done_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Story {
+  id: number;
+  pain_project_id: number;
+  sprint_id: number | null;
+  title: string;
+  description: string | null;
+  story_type: StoryType;
+  points: number | null;
+  status: StoryStatus;
+  priority: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductProject {
+  id: number;
+  pain_id: number;
+  name: string;
+  problem_statement: string | null;
+  target_audience: string | null;
+  monetization_model: string | null;
+  phase: ProjectPhase;
+  system_id: number | null;
+  story_count: number;
+  done_count: number;
+  active_sprint: Sprint | null;
+  created_at: string;
+  updated_at: string;
+}

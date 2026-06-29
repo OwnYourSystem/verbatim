@@ -393,6 +393,28 @@ class ReadingItem(TimestampMixin, Base):
     checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class StoryType(enum.StrEnum):
+    epic = "epic"
+    story = "story"
+    task = "task"
+    bug = "bug"
+
+
+class StoryStatus(enum.StrEnum):
+    backlog = "backlog"
+    todo = "todo"
+    doing = "doing"
+    review = "review"
+    done = "done"
+
+
+class SprintStatus(enum.StrEnum):
+    planning = "planning"
+    active = "active"
+    review = "review"
+    closed = "closed"
+
+
 class PainArea(enum.StrEnum):
     data_engineering = "data_engineering"
     ml = "ml"
@@ -449,3 +471,62 @@ class PainProject(TimestampMixin, Base):
 
     pain: Mapped[Pain] = relationship(back_populates="project")
     system: Mapped[System | None] = relationship()
+    sprints: Mapped[list[ProductSprint]] = relationship(
+        back_populates="project", cascade="all, delete-orphan", order_by="ProductSprint.number"
+    )
+    stories: Mapped[list[StoryItem]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
+
+
+class ProductSprint(TimestampMixin, Base):
+    """A time-boxed Scrum sprint for a product project."""
+
+    __tablename__ = "product_sprints"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    pain_project_id: Mapped[int] = mapped_column(
+        ForeignKey("pain_projects.id", ondelete="CASCADE"), nullable=False
+    )
+    number: Mapped[int] = mapped_column(Integer, nullable=False)
+    goal: Mapped[str | None] = mapped_column(Text)
+    start_date: Mapped[date | None] = mapped_column(Date)
+    end_date: Mapped[date | None] = mapped_column(Date)
+    status: Mapped[SprintStatus] = mapped_column(
+        Enum(SprintStatus), default=SprintStatus.planning, nullable=False
+    )
+
+    project: Mapped[PainProject] = relationship(back_populates="sprints")
+    stories: Mapped[list[StoryItem]] = relationship(back_populates="sprint")
+
+
+class StoryItem(TimestampMixin, Base):
+    """A user story / backlog item belonging to a product project.
+
+    `sprint_id = None` → lives in the product backlog.
+    `sprint_id` set + `status` in todo/doing/review → active sprint work.
+    `status = done` → completed, regardless of sprint.
+    """
+
+    __tablename__ = "story_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    pain_project_id: Mapped[int] = mapped_column(
+        ForeignKey("pain_projects.id", ondelete="CASCADE"), nullable=False
+    )
+    sprint_id: Mapped[int | None] = mapped_column(
+        ForeignKey("product_sprints.id", ondelete="SET NULL")
+    )
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    story_type: Mapped[StoryType] = mapped_column(
+        Enum(StoryType), default=StoryType.story, nullable=False
+    )
+    points: Mapped[int | None] = mapped_column(Integer)  # Fibonacci: 1,2,3,5,8,13
+    status: Mapped[StoryStatus] = mapped_column(
+        Enum(StoryStatus), default=StoryStatus.backlog, nullable=False
+    )
+    priority: Mapped[int] = mapped_column(Integer, default=3, nullable=False)  # 1=highest
+
+    project: Mapped[PainProject] = relationship(back_populates="stories")
+    sprint: Mapped[ProductSprint | None] = relationship(back_populates="stories")

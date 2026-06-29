@@ -577,6 +577,77 @@ class AIProjectAssist(BaseModel):
     justification: str
 
 
+# ---- Product Development (Scrum) ----
+
+class SprintCreate(BaseModel):
+    goal: str | None = None
+    start_date: str | None = None  # ISO date
+    end_date: str | None = None
+
+
+class SprintUpdate(BaseModel):
+    goal: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    status: str | None = None
+
+
+class SprintRead(_ORM):
+    id: int
+    pain_project_id: int
+    number: int
+    goal: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    status: str
+    story_count: int = 0
+    done_count: int = 0
+
+
+class StoryCreate(BaseModel):
+    title: str
+    description: str | None = None
+    story_type: str = "story"
+    points: int | None = None
+    priority: int = 3
+
+
+class StoryUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    story_type: str | None = None
+    points: int | None = None
+    status: str | None = None
+    priority: int | None = None
+    sprint_id: int | None = None
+
+
+class StoryRead(_ORM):
+    id: int
+    pain_project_id: int
+    sprint_id: int | None = None
+    title: str
+    description: str | None = None
+    story_type: str
+    points: int | None = None
+    status: str
+    priority: int
+
+
+class ProductProjectRead(_ORM):
+    id: int
+    pain_id: int
+    name: str
+    problem_statement: str | None = None
+    target_audience: str | None = None
+    monetization_model: str | None = None
+    phase: str
+    system_id: int | None = None
+    story_count: int = 0
+    done_count: int = 0
+    active_sprint: SprintRead | None = None
+
+
 # TaskRead / SubtaskRead reference SKRead (defined later); resolve those
 # forward references now that every schema in this module exists.
 TaskRead.model_rebuild()

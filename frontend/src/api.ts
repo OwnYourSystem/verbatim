@@ -7,6 +7,7 @@ import type {
   IntakeStep,
   Pain,
   PainDiscoveryItem,
+  ProductProject,
   ProposalStatus,
   ReadingItem,
   RebalanceProposal,
@@ -14,6 +15,8 @@ import type {
   SKRating,
   SKSuggestResponse,
   SpecificKnowledge,
+  Sprint,
+  Story,
   Subtask,
   System,
   SystemStatus,
@@ -221,4 +224,24 @@ export const api = {
     request<ReadingItem>(`/reading-items/${id}`, { method: "PATCH", body: JSON.stringify({ is_checked: true }) }),
   deleteReadingItem: (id: number) =>
     request<void>(`/reading-items/${id}`, { method: "DELETE" }),
+
+  // Product Development (Scrum)
+  listProductProjects: () =>
+    request<ProductProject[]>("/product-dev/projects"),
+  getProductProject: (id: number) =>
+    request<ProductProject>(`/product-dev/projects/${id}`),
+  listStories: (projectId: number) =>
+    request<Story[]>(`/product-dev/projects/${projectId}/stories`),
+  createStory: (projectId: number, body: { title: string; description?: string; story_type?: string; points?: number; priority?: number }) =>
+    request<Story>(`/product-dev/projects/${projectId}/stories`, { method: "POST", body: JSON.stringify(body) }),
+  updateStory: (storyId: number, body: Partial<{ title: string; description: string | null; story_type: string; points: number | null; status: string; priority: number; sprint_id: number | null }>) =>
+    request<Story>(`/product-dev/stories/${storyId}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteStory: (storyId: number) =>
+    request<void>(`/product-dev/stories/${storyId}`, { method: "DELETE" }),
+  listSprints: (projectId: number) =>
+    request<Sprint[]>(`/product-dev/projects/${projectId}/sprints`),
+  createSprint: (projectId: number, body: { goal?: string; start_date?: string; end_date?: string }) =>
+    request<Sprint>(`/product-dev/projects/${projectId}/sprints`, { method: "POST", body: JSON.stringify(body) }),
+  updateSprint: (sprintId: number, body: Partial<{ goal: string; start_date: string; end_date: string; status: string }>) =>
+    request<Sprint>(`/product-dev/sprints/${sprintId}`, { method: "PATCH", body: JSON.stringify(body) }),
 };

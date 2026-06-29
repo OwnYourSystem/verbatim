@@ -6,18 +6,18 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 ## ▶ Resume here (read this first)
 
-**Status:** Phases 1–9 are **done, committed, pushed**. Production is **live on Google Cloud** (project `mindanchor-500313`, region `europe-north2`) — Cloud Run + Cloud SQL. The authoritative runbook is `docs/DEPLOY.md`; architecture in `docs/DOCUMENTATION.md`.
+**Status:** Phases 1–9 + CR-2 (SK ratings) + CR-3 (Product Dev) are **done**. CR-2 is **live in production**. CR-3 is on branch `product-dev` (PR open → awaiting merge). Production is **live on Google Cloud** (project `mindanchor-500313`, region `europe-north2`) — Cloud Run + Cloud SQL. The authoritative runbook is `docs/DEPLOY.md`; architecture in `docs/DOCUMENTATION.md`.
 
-**⚠ Actual production topology (authoritative — 2026-06-28, from owner's deploy docs):**
-- **Frontend:** Cloud Run `mindanchor-frontend` (`https://mindanchor-frontend-2814170686.europe-north2.run.app`) — React/Vite SPA served by nginx; nginx proxies `/api/*` to the backend server-side (so no CORS hop). **Deployed manually** (no Cloud Build trigger yet).
-- **Backend:** Cloud Run `mindanchor` (`https://mindanchor-p56twm4tsa-ma.a.run.app`), FastAPI/uvicorn, Docker from `backend/`. Auto-deployed from GitHub `main` by a **Cloud Build trigger** (build `backend/Dockerfile` → Artifact Registry → `gcloud run services update`). The deploy step **only swaps the image**, so Cloud Run env vars persist.
-- **Database:** Cloud SQL Postgres `mindanchor-db`, reached via the Cloud SQL connector socket. `config.py` still normalizes a bare `postgres://` `DATABASE_URL` to `postgresql+psycopg2://` (SQLAlchemy 2.x rejects the alias).
+**⚠ Actual production topology (authoritative — 2026-06-29):**
+- **Frontend:** Cloud Run `mindanchor-frontend` (`https://mindanchor-frontend-2814170686.europe-north2.run.app`) — React/Vite SPA served by nginx; nginx proxies `/api/*` to the backend server-side (so no CORS hop). **Deployed manually** (no Cloud Build trigger yet). Last deployed: revision `mindanchor-frontend-00002-54n` (CR-2, 2026-06-28).
+- **Backend:** Cloud Run `mindanchor` (`https://mindanchor-p56twm4tsa-ma.a.run.app`), FastAPI/uvicorn, Docker from `backend/`. Auto-deployed from GitHub `main` by a **Cloud Build trigger**. Last deployed: revision `mindanchor-00012-kc7` (CR-2, 2026-06-28). Merging CR-3 PR to `main` will trigger a new revision.
+- **Database:** Cloud SQL Postgres `mindanchor-db`, reached via the Cloud SQL connector socket. `config.py` normalizes bare `postgres://` to `postgresql+psycopg2://`. Migration chain: 0001→0009 live in prod; migration 0010 will apply automatically on next backend deploy.
 - **Migrations:** applied on startup by the FastAPI lifespan hook in `app/main.py` (`alembic upgrade head`).
-- **⚠ Stale-but-tracked config:** `render.yaml` and `frontend/vercel.json` are from the earlier Render/Vercel plan and are **NOT used** by the live GCP deploy. The GCP setup lives in `deploy/cloudrun.yaml` + `deploy/cloudsql-setup.sh`. `docs/DEPLOY.md` references `frontend/nginx.conf` / frontend `Dockerfile` / root `docker-compose.yml` that are **not yet committed** to the repo.
+- **Stale-but-tracked config:** `render.yaml` is from the earlier Render plan (not used). `frontend/vercel.json` deleted. GCP setup: `deploy/cloudrun.yaml` + `deploy/cloudsql-setup.sh`. Frontend infra (`frontend/Dockerfile`, `nginx.conf`, `cloudbuild.yaml`, root `docker-compose.yml`) committed.
 
-**⚠ Frontend changes don't auto-deploy:** the Cloud Build trigger rebuilds the **backend only**. Merging to `main` will NOT update the live frontend — run the manual frontend deploy in `docs/DEPLOY.md`. For breaking API changes (e.g. CR-2's SK `rating`), deploy **backend first, then frontend**.
+**⚠ Frontend changes don't auto-deploy:** the Cloud Build trigger rebuilds the **backend only**. After merging CR-3, run the manual frontend deploy (`docs/DEPLOY.md`). A frontend Cloud Build trigger (`frontend/cloudbuild.yaml`) is ready to wire — command in `docs/DEPLOY.md` — but requires explicit user approval.
 
-**Do next:** CR-2 (SK rating model) is on branch `claude/determined-curie-h90f00` → open/merge PR so the backend auto-deploys + runs migration 0009, then **manually deploy the frontend** for the new SK Universe/Knowledge Pool to appear live. Optionally wire a frontend Cloud Build trigger. Then Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
+**Do next:** (1) Merge `product-dev` PR → backend auto-deploys + migration 0010 runs. (2) Manually deploy frontend (CR-3 adds Product Dev nav link). (3) Smoke-test the full flow: Wall of Pains → create project → Product Dev → sprints + stories. (4) Optionally wire the frontend Cloud Build trigger (user approval needed). (5) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
 
 **Live agent is ON:** `backend/.env` has a real (rotated) key, so `get_llm()`/`get_intake()` use real Claude when the backend runs. Not yet smoke-tested live (needs backend running against local Postgres). Tests stay offline via `tests/conftest.py`.
 
@@ -89,6 +89,17 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
 ---
 
 ## Action log
+
+### 2026-06-29 — CR-3: Product Development (Scrum) page
+
+New feature on branch `product-dev` (from `main`):
+
+- **Data model (`models.py`):** new enums `StoryType` (epic/story/task/bug), `StoryStatus` (backlog/todo/doing/review/done), `SprintStatus` (planning/active/review/closed). New tables: `ProductSprint` (linked to `PainProject`, auto-numbered per project, one active at a time) and `StoryItem` (linked to `PainProject` + optional `Sprint`, Fibonacci points, priority 1-5). Added `sprints` and `stories` relationships to `PainProject`.
+- **Migration `0010_product_sprints_and_stories.py`:** creates both tables. Full 0001→0010 chain verified on SQLite.
+- **API (`/product-dev`):** `GET /product-dev/projects` (list all PainProjects with story/done counts + active sprint), `GET/POST stories`, `PATCH/DELETE stories/{id}`, `GET/POST sprints`, `PATCH sprints/{id}`. Assigning a story to a sprint auto-promotes it from backlog→todo; removing resets to backlog. Activating a sprint auto-demotes previous active sprint to review.
+- **Frontend:** `types.ts` — `Sprint`, `Story`, `ProductProject` types. `api.ts` — 10 new product-dev API calls. `pages/ProductDev.tsx` — Scrum board with 5-column board (Backlog/To Do/In Progress/Review/Done), sprint management panel, add-story form with type picker, story cards with points (Fibonacci), priority, status advance buttons, assign-to-sprint. `App.tsx` — "Product Dev 🚀" nav link. `main.tsx` — `/product-dev` route.
+- **Flow:** Wall of Pains → create project → Product Dev page shows it → create sprint → add stories → start sprint → move stories through board → close sprint.
+- **Tests (`test_product_dev.py`):** 9 tests covering create/list/delete stories, sprint numbering, one-active-sprint rule, story→sprint assignment flow, project-level counts. **Verified: ruff clean, 49 tests pass; tsc clean; vite build OK.**
 
 ### 2026-06-28 — Deploy-doc reconciliation, frontend deploy infra, multi-user repo + operating model
 
