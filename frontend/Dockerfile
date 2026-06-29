@@ -13,8 +13,11 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # at container start, expanding PORT / BACKEND_ORIGIN / BACKEND_HOST.
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 # Defaults for local `docker run` without overrides (compose / Cloud Run set their own).
+# NGINX_ENVSUBST_TEMPLATE_VARS limits substitution to only our 3 vars — prevents
+# nginx's own runtime variables ($remote_addr, $scheme, etc.) from being wiped.
 ENV PORT=80 \
     BACKEND_ORIGIN=http://backend:8080 \
-    BACKEND_HOST=backend
+    BACKEND_HOST=backend \
+    NGINX_ENVSUBST_TEMPLATE_VARS="PORT BACKEND_ORIGIN BACKEND_HOST"
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
