@@ -1,7 +1,7 @@
 import type { Chart, ChartPoint } from "../types";
 
 const UI = "#7c3aed";
-const TRACK = "rgba(120,140,220,0.12)";
+const TRACK = "var(--me-border)";
 
 function fmt(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
@@ -60,7 +60,7 @@ function PieChart({ chart }: { chart: Chart }) {
   return (
     <div className="flex items-center gap-5">
       <svg width="150" height="150" viewBox="0 0 150 150" className="shrink-0">
-        <circle cx="75" cy="75" r={R} fill="none" stroke={TRACK} strokeWidth="18" />
+        <circle cx="75" cy="75" r={R} fill="none" style={{ stroke: TRACK }} strokeWidth="18" />
         {total > 0 &&
           chart.points.map((p, i) => {
             const frac = Math.max(0, p.value) / total;
@@ -82,7 +82,7 @@ function PieChart({ chart }: { chart: Chart }) {
             offset += dash;
             return el;
           })}
-        <text x="75" y="80" textAnchor="middle" className="metric" fill="#c8d2ff" fontSize="20">
+        <text x="75" y="80" textAnchor="middle" className="metric" style={{ fill: "var(--me-ink)" }} fontSize="20">
           {fmt(total)}
         </text>
       </svg>
@@ -131,7 +131,7 @@ function WaterfallChart({ chart }: { chart: Chart }) {
               textAnchor="middle"
               fontSize="5"
               className="metric"
-              fill="#c8d2ff"
+              style={{ fill: "var(--me-ink)" }}
             >
               {fmt(Math.abs(s.value))}
             </text>
@@ -140,7 +140,7 @@ function WaterfallChart({ chart }: { chart: Chart }) {
               y={H + 12}
               textAnchor="middle"
               fontSize="4.5"
-              fill="#6b82b5"
+              style={{ fill: "var(--color-signal-idle)" }}
             >
               {s.label}
             </text>
@@ -155,7 +155,7 @@ function ChartFrame({ chart, children }: { chart: Chart; children: React.ReactNo
   return (
     <div
       className="rounded-2xl p-4"
-      style={{ background: "rgba(8,12,24,0.6)", border: "1px solid rgba(120,140,220,0.12)" }}
+      style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
     >
       <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-soft dark:text-slate-400 mb-3">
         {chart.title}

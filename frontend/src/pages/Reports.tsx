@@ -35,7 +35,7 @@ function FreshnessBadge({ generatedAt }: { generatedAt: string }) {
     <time
       dateTime={generatedAt}
       className="metric text-[11px] px-2.5 py-1 rounded-full"
-      style={{ color, border: `1px solid ${color}`, background: "rgba(8,12,24,0.6)" }}
+      style={{ color, border: `1px solid ${color}`, background: "var(--glass-bg)" }}
       title="Report generated at"
     >
       ⏱ {generatedAt.replace("T", " ").slice(0, 16)}
@@ -50,8 +50,8 @@ function ReportSection({ heading, items }: { heading: string; items: string[] })
       aria-label={heading}
       className="rounded-2xl p-4"
       style={{
-        background: "rgba(8,12,24,0.6)",
-        border: "1px solid rgba(120,140,220,0.12)",
+        background: "var(--glass-bg)",
+        border: "1px solid var(--glass-border)",
         borderLeft: `2px solid ${s.border}`,
       }}
     >
@@ -61,7 +61,7 @@ function ReportSection({ heading, items }: { heading: string; items: string[] })
       >
         {heading}
       </h3>
-      <ul className="space-y-2 text-sm" style={{ color: "rgba(200,210,255,0.85)" }}>
+      <ul className="space-y-2 text-sm" style={{ color: "var(--me-ink)" }}>
         {items.map((item, j) => (
           <li key={j} className="flex gap-2.5 items-start group rounded-lg px-1.5 py-1 transition-colors hover:bg-white/[0.04]">
             <span
@@ -144,7 +144,7 @@ function StatStrip({ report }: { report: Report }) {
           <div
             key={st.label}
             className="rounded-2xl p-4"
-            style={{ background: "rgba(8,12,24,0.6)", border: "1px solid rgba(120,140,220,0.12)" }}
+            style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
           >
             <div className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-2" style={{ color: "var(--color-signal-idle)" }}>
               {st.label}
@@ -154,7 +154,7 @@ function StatStrip({ report }: { report: Report }) {
                 {st.value}
               </span>
               {st.unit && (
-                <span className="metric text-xs" style={{ color: "rgba(200,210,255,0.5)" }}>
+                <span className="metric text-xs" style={{ color: "var(--me-ink-soft)" }}>
                   {st.unit}
                 </span>
               )}
@@ -282,7 +282,7 @@ export function Reports() {
       {report ? (
         <div className="glass-panel p-6 animate-fade-up" role="tabpanel">
           <h2 className="text-lg font-bold">{report.title}</h2>
-          <p className="mt-1 text-base italic" style={{ color: "rgba(210,220,255,0.75)" }}>
+          <p className="mt-1 text-base italic" style={{ color: "var(--me-ink-soft)" }}>
             {report.summary}
           </p>
           {report.charts.length > 0 && (
@@ -322,7 +322,7 @@ export function Reports() {
 
       <div
         className="animate-fade-up rounded-3xl p-6"
-        style={{ background: "rgba(6,9,20,0.7)", border: "1px solid rgba(120,140,220,0.12)" }}
+        style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
       >
         <div className="flex items-center gap-3 mb-3">
           <span

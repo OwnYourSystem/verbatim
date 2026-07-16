@@ -18,7 +18,7 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 **Both frontend and backend now auto-deploy on push to `main`.** No manual deploy steps needed going forward.
 
-**Do next:** (1) Merge `feature/focus-timer` (Timer/Focus feature — see 2026-07-16 entry below) and deploy. (2) Smoke-test the full Product Dev flow: Wall of Pains → create project → Product Dev → sprints + stories. (3) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
+**Do next:** (1) Smoke-test the full Product Dev flow live on mobile: Wall of Pains → create project → Product Dev → sprints + stories (the mobile layout overlap bug is fixed — see 2026-07-16 "mobile fixes" entry below — but hasn't been eyeballed against real Product Dev data on a phone). (2) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
 
 **Live agent is ON:** `backend/.env` has a real (rotated) key, so `get_llm()`/`get_intake()` use real Claude when the backend runs. Not yet smoke-tested live (needs backend running against local Postgres). Tests stay offline via `tests/conftest.py`.
 
@@ -90,6 +90,15 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
 ---
 
 ## Action log
+
+### 2026-07-16 — Mobile fixes: Reports theme contrast, WorkItemEditor time-log row, Product Dev layout overlap
+
+Owner sent 6 mobile screenshots showing three problems; fixed all three on branch `fix/mobile-reports-and-layouts` (from latest `main`, after the focus-timer merge).
+
+- **Reports page unreadable in light theme:** root cause was `components/Charts.tsx` and several spots in `pages/Reports.tsx` using **literal hardcoded colors** (`rgba(8,12,24,0.6)`, `#c8d2ff`, etc.) in inline `style={}` props instead of the CSS custom properties (`--glass-bg`, `--glass-border`, `--me-ink`, `--me-ink-soft`) the theme-toggle work had set up. Because these were inline styles, not Tailwind utility classes, the earlier mechanical `dark:`-class migration script (regex over Tailwind class strings) never touched them — invisible to that pass, so Reports silently kept its dark-only styling while every other migrated page followed the theme. Also switched SVG `fill`/`stroke` attributes that reference a CSS var to `style={{ fill: ... }}` / `style={{ stroke: ... }}` (SVG presentation attributes don't reliably resolve `var()` the way `style` does). Left the semantic status-border colors, the tab-pill gradient, and the sun-badge tint alone — those are intentional constant accents, not theme bugs.
+- **WorkItemEditor's time-log row cramped on mobile:** the hours input / note field / "Log time" button lived in one unconstrained `flex` row with a fixed-width note field — same overflow-prone pattern already fixed once on Calendar. Changed to `flex-col sm:flex-row` with each control `w-full` below `sm:`.
+- **Product Dev list+detail panels overlapping on mobile:** same root cause, sidebar (`w-52 shrink-0`) and detail pane shared one `flex` row with no stacking breakpoint. Changed the outer container to `flex-col md:flex-row`, the aside to `w-full md:w-52 md:shrink-0`. Also wrapped the project header stats row (`flex-wrap` + `min-w-0`) while in the file, same failure class.
+- **Verified live via Playwright screenshots** at a 380px viewport, not just code review: Reports now shows properly styled light-theme cards with legible text (`scrollWidth === clientWidth`, zero overflow); Product Dev's empty state renders cleanly with the new stacking (no local test data existed to screenshot the populated list+detail split, but the CSS fix is the same structural pattern verified working elsewhere); WorkItemEditor's hours/log-time row now stacks fully visible top-to-bottom with no squeezed note field. **Also verified: 59 backend tests pass (unaffected, no backend files touched), tsc clean, vite build OK.**
 
 ### 2026-07-16 — Timer/Focus feature: pick a Specific Knowledge → countdown → Achievements
 

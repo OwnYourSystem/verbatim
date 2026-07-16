@@ -306,24 +306,24 @@ export function WorkItemEditor({
           </span>
         </div>
         {onLogTime && (
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="number"
               min={0}
               step={0.25}
               placeholder="hrs"
-              className={`${inp} !w-20`}
+              className={`${inp} w-full sm:!w-20`}
               value={logHours}
               onChange={(e) => setLogHours(e.target.value)}
             />
             <input
-              className={`${inp} flex-1`}
+              className={`${inp} w-full sm:flex-1 sm:min-w-0`}
               placeholder="What did you work on? (optional)"
               value={logNote}
               onChange={(e) => setLogNote(e.target.value)}
             />
             <button
-              className="btn-secondary !px-3 !py-1.5"
+              className="btn-secondary !px-3 !py-1.5 w-full sm:w-auto"
               onClick={async () => {
                 const h = Number(logHours);
                 if (h > 0) {

@@ -376,9 +376,9 @@ export function ProductDev() {
         <span className="text-ink-soft dark:text-slate-500 text-sm">Scrum board for your product ideas</span>
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex flex-col md:flex-row gap-4">
         {/* Project list sidebar */}
-        <aside className="w-52 shrink-0 space-y-1.5">
+        <aside className="w-full md:w-52 md:shrink-0 space-y-1.5">
           <p className="text-[11px] font-semibold text-ink-soft dark:text-slate-500 uppercase tracking-wider px-1 mb-2">Products</p>
           {projects.map(p => (
             <button
@@ -412,8 +412,8 @@ export function ProductDev() {
           <div className="flex-1 min-w-0 space-y-4">
             {/* Project header */}
             <div className="bg-paper dark:bg-slate-800/40 border border-ink/10 dark:border-slate-700/60 rounded-2xl p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h2 className="text-lg font-bold text-ink dark:text-slate-100">{selected.name}</h2>
                     <span
