@@ -15,10 +15,12 @@ from sqlalchemy.orm import Session
 from app.models import (
     Priority,
     SKRating,
+    SpecificKnowledge,
     Subtask,
     System,
     SystemStatus,
     Task,
+    TimeLog,
     WorkStatus,
 )
 
@@ -214,4 +216,32 @@ def build_today(db: Session, today: date | None = None) -> dict:
         "focus_subtasks": focus_subtasks,
         "upcoming_deadlines": upcoming,
         "flagged": flagged,
+        "achievements": today_achievements(db, today),
     }
+
+
+def today_achievements(db: Session, today: date | None = None) -> list[dict]:
+    """Today's focus time per Specific Knowledge, from Focus Timer sessions.
+
+    Only counts TimeLogs that carry an `sk_id` (i.e. came from the timer, not
+    a manual hours log against a task) — that's what makes this "what did I
+    focus on today" rather than a general time report.
+    """
+    today = today or date.today()
+    stmt = select(TimeLog).where(TimeLog.day == today, TimeLog.sk_id.is_not(None))
+    logs = db.execute(stmt).scalars().all()
+
+    totals: dict[int, float] = {}
+    for log in logs:
+        totals[log.sk_id] = totals.get(log.sk_id, 0.0) + log.hours
+
+    if not totals:
+        return []
+
+    sks = db.query(SpecificKnowledge).filter(SpecificKnowledge.id.in_(totals.keys())).all()
+    items = [
+        {"sk_id": sk.id, "sk_name": sk.name, "rating": sk.rating, "hours": round(totals[sk.id], 2)}
+        for sk in sks
+    ]
+    items.sort(key=lambda i: i["hours"], reverse=True)
+    return items

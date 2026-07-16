@@ -39,4 +39,5 @@ def today(db: Session = Depends(get_db)):
         focus_subtasks=[_subtask_read(st) for st in data["focus_subtasks"]],
         upcoming_deadlines=[_task_read(t) for t in data["upcoming_deadlines"]],
         flagged=[_task_read(t) for t in data["flagged"]],
+        achievements=data["achievements"],
     )

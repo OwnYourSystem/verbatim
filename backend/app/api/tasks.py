@@ -217,9 +217,12 @@ def create_time_log(payload: TimeLogCreate, db: Session = Depends(get_db)):
         raise HTTPException(404, "Task not found")
     if payload.subtask_id is not None and not db.get(Subtask, payload.subtask_id):
         raise HTTPException(404, "Subtask not found")
+    if payload.sk_id is not None and not db.get(SpecificKnowledge, payload.sk_id):
+        raise HTTPException(404, "Specific Knowledge not found")
     log = TimeLog(
         task_id=payload.task_id,
         subtask_id=payload.subtask_id,
+        sk_id=payload.sk_id,
         hours=payload.hours,
         day=payload.day or date.today(),
         note=payload.note,

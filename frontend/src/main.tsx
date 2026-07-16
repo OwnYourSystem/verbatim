@@ -12,6 +12,7 @@ import { KnowledgePool } from "./pages/KnowledgePool";
 import { CheckOutASAP } from "./pages/CheckOutASAP";
 import { WallOfPains } from "./pages/WallOfPains";
 import { ProductDev } from "./pages/ProductDev";
+import { FocusTimer } from "./pages/FocusTimer";
 import { ThemeProvider } from "./theme";
 import "./index.css";
 
@@ -53,6 +54,7 @@ const router = createBrowserRouter([
       { path: "checkout-asap", element: <CheckOutASAP /> },
       { path: "wall-of-pains", element: <WallOfPains /> },
       { path: "product-dev", element: <ProductDev /> },
+      { path: "focus-timer", element: <FocusTimer /> },
     ],
   },
 ]);

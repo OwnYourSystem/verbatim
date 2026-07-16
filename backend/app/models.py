@@ -246,12 +246,21 @@ class TimeLog(TimestampMixin, Base):
     subtask_id: Mapped[int | None] = mapped_column(
         ForeignKey("subtasks.id", ondelete="CASCADE")
     )
+    # Which Specific Knowledge this chunk of time was spent building — set when
+    # the log comes from the Focus Timer, so the Today page can attribute
+    # today's focus time per knowledge area ("Achievements"). Optional: manual
+    # time logs (not via the timer) don't set this. SET NULL on SK delete so
+    # historical time logs aren't lost.
+    sk_id: Mapped[int | None] = mapped_column(
+        ForeignKey("specific_knowledges.id", ondelete="SET NULL")
+    )
     hours: Mapped[float] = mapped_column(Float, nullable=False)
     day: Mapped[date] = mapped_column(Date, nullable=False)
     note: Mapped[str | None] = mapped_column(Text)
 
     task: Mapped[Task | None] = relationship(back_populates="time_logs")
     subtask: Mapped[Subtask | None] = relationship(back_populates="time_logs")
+    specific_knowledge: Mapped[SpecificKnowledge | None] = relationship()
 
 
 class FocusBlock(TimestampMixin, Base):

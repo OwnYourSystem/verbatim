@@ -7,6 +7,7 @@ import { ProgressRing } from "../components/me/ProgressRing";
 import { PrimaryButton } from "../components/me/PrimaryButton";
 import { DraggableList } from "../components/me/DraggableList";
 import { ME_BORDER, ME_CHIP_BG, ME_INK, ME_INK_SOFT, ME_INPUT_BG, pastelFor } from "../components/me/tokens";
+import { ratingColor, ratingLabel } from "../components/Thermometer";
 
 /** URL that deep-links to a specific task inside the Systems page. */
 function taskLink(t: Task) {
@@ -252,6 +253,25 @@ export function Dashboard() {
           </PrimaryButton>
         </div>
       </MeCard>
+
+      {data.achievements.length > 0 && (
+        <MeCard>
+          <MeSectionTitle>Achievements today 🏆</MeSectionTitle>
+          <p className="text-sm mb-3" style={{ color: ME_INK_SOFT }}>
+            Focus time logged via the Timer, by knowledge area.
+          </p>
+          <ul className="space-y-2">
+            {data.achievements.map((a) => (
+              <li key={a.sk_id} className="flex items-center gap-2 text-sm">
+                <span style={{ color: ratingColor(a.rating) }}>●</span>
+                <span className="flex-1">{a.sk_name}</span>
+                <Chip>{ratingLabel(a.rating)}</Chip>
+                <Chip>{a.hours}h</Chip>
+              </li>
+            ))}
+          </ul>
+        </MeCard>
+      )}
     </div>
   );
 }

@@ -154,12 +154,16 @@ class TimeLogBase(BaseModel):
 class TimeLogCreate(TimeLogBase):
     task_id: int | None = None
     subtask_id: int | None = None
+    # Set by the Focus Timer so this chunk of time counts toward that
+    # knowledge's "Achievements" on the Today page. Optional elsewhere.
+    sk_id: int | None = None
 
 
 class TimeLogRead(_ORM):
     id: int
     task_id: int | None
     subtask_id: int | None
+    sk_id: int | None = None
     hours: float
     day: date
     note: str | None
@@ -441,6 +445,15 @@ class Report(BaseModel):
 
 
 # ---- Dashboard ----
+class AchievementItem(BaseModel):
+    """Today's focus time on one Specific Knowledge, via the Focus Timer."""
+
+    sk_id: int
+    sk_name: str
+    rating: SKRating
+    hours: float
+
+
 class TodayView(BaseModel):
     day: date
     focus_system: SystemRead | None
@@ -448,6 +461,7 @@ class TodayView(BaseModel):
     focus_subtasks: list[SubtaskRead] = []
     upcoming_deadlines: list[TaskRead]
     flagged: list[TaskRead]
+    achievements: list[AchievementItem] = []
 
 
 # ---- Specific Knowledge ----
@@ -479,6 +493,20 @@ class SKRead(_ORM):
 class SKSuggestRequest(BaseModel):
     title: str
     description: str | None = None
+
+
+class SKFocusTask(BaseModel):
+    """An open Task or Subtask linked to a Specific Knowledge — what the
+    Focus Timer's task picker offers once you've picked which knowledge to
+    work on."""
+
+    kind: Literal["task", "subtask"]
+    id: int
+    title: str
+    system_name: str | None = None
+    parent_task_title: str | None = None  # set for subtasks
+    status: WorkStatus
+    priority: int
 
 
 class SKSuggestResponse(BaseModel):

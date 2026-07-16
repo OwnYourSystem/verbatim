@@ -75,6 +75,7 @@ export interface TimeLog {
   id: number;
   task_id: number | null;
   subtask_id: number | null;
+  sk_id: number | null;
   hours: number;
   day: string;
   note: string | null;
@@ -102,6 +103,13 @@ export const CHECKPOINTS = [
   "Production",
 ] as const;
 
+export interface AchievementItem {
+  sk_id: number;
+  sk_name: string;
+  rating: SKRating;
+  hours: number;
+}
+
 export interface TodayView {
   day: string;
   focus_system: System | null;
@@ -109,6 +117,7 @@ export interface TodayView {
   focus_subtasks: Subtask[];
   upcoming_deadlines: Task[];
   flagged: Task[];
+  achievements: AchievementItem[];
 }
 
 export interface CheckIn {
@@ -249,6 +258,16 @@ export interface SpecificKnowledge {
   in_universe: boolean;
   completed_count: number;
   task_count: number;
+}
+
+export interface SKFocusTask {
+  kind: "task" | "subtask";
+  id: number;
+  title: string;
+  system_name: string | null;
+  parent_task_title: string | null;
+  status: WorkStatus;
+  priority: number;
 }
 
 export interface SKSuggestResponse {

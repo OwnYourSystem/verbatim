@@ -11,14 +11,14 @@ This file is the working memory for the MindAnchor build. It records **what the 
 **⚠ Actual production topology (authoritative — 2026-06-29):**
 - **Frontend:** Cloud Run `mindanchor-frontend` (`https://mindanchor-frontend-2814170686.europe-north2.run.app`) — React/Vite SPA served by nginx; nginx proxies `/api/*` to the backend server-side (so no CORS hop). **Auto-deployed** via Cloud Build trigger `mindanchor-frontend` (fires on `frontend/**` changes to `main`). Last deployed: revision `mindanchor-frontend-00005-xsx` (CR-3 + nginx envsubst fix, 2026-06-29).
 - **Backend:** Cloud Run `mindanchor` (`https://mindanchor-p56twm4tsa-ma.a.run.app`), FastAPI/uvicorn, Docker from `backend/`. Auto-deployed from GitHub `main` by a **Cloud Build trigger**. Last deployed: revision after CR-3 merge (migration 0010 applied on startup).
-- **Database:** Cloud SQL Postgres `mindanchor-db`, reached via the Cloud SQL connector socket. `config.py` normalizes bare `postgres://` to `postgresql+psycopg2://`. Migration chain: 0001→0010 live in prod.
+- **Database:** Cloud SQL Postgres `mindanchor-db`, reached via the Cloud SQL connector socket. `config.py` normalizes bare `postgres://` to `postgresql+psycopg2://`. Migration chain: 0001→0011 live in prod.
 - **Migrations:** applied on startup by the FastAPI lifespan hook in `app/main.py` (`alembic upgrade head`).
 - **Stale-but-tracked config:** `render.yaml` is from the earlier Render plan (not used). GCP setup: `deploy/cloudrun.yaml` + `deploy/cloudsql-setup.sh`. Frontend infra (`frontend/Dockerfile`, `nginx.conf`, `cloudbuild.yaml`, root `docker-compose.yml`) committed.
 - **nginx envsubst fix (PR #12):** `NGINX_ENVSUBST_TEMPLATE_VARS` added to `frontend/Dockerfile` — prevents nginx:alpine from wiping its own runtime variables during envsubst template processing.
 
 **Both frontend and backend now auto-deploy on push to `main`.** No manual deploy steps needed going forward.
 
-**Do next:** (1) Merge `feature/sk-universe-webgl` (real WebGL 3D rendering — see 2026-07-16 entry below) and deploy. (2) Build the Timer/Focus feature (pick a Specific Knowledge → find its tasks → countdown → Achievements on Today). (3) Smoke-test the full Product Dev flow: Wall of Pains → create project → Product Dev → sprints + stories. (4) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
+**Do next:** (1) Merge `feature/focus-timer` (Timer/Focus feature — see 2026-07-16 entry below) and deploy. (2) Smoke-test the full Product Dev flow: Wall of Pains → create project → Product Dev → sprints + stories. (3) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
 
 **Live agent is ON:** `backend/.env` has a real (rotated) key, so `get_llm()`/`get_intake()` use real Claude when the backend runs. Not yet smoke-tested live (needs backend running against local Postgres). Tests stay offline via `tests/conftest.py`.
 
@@ -90,6 +90,19 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
 ---
 
 ## Action log
+
+### 2026-07-16 — Timer/Focus feature: pick a Specific Knowledge → countdown → Achievements
+
+Built the last item from the original owner request list, on branch `feature/focus-timer`.
+
+- **`time_logs.sk_id`** (migration 0011, nullable FK → `specific_knowledges.id`, `ON DELETE SET NULL`) — optional, set only when a log comes from the Focus Timer, so a manual hours entry against a task doesn't get counted as an "achievement." Used `op.batch_alter_table` (not a plain `op.add_column`) since SQLite can't ALTER-add a column with an inline FK constraint directly — Postgres doesn't need it but the batch form works on both, and it's what let the migration verify clean on SQLite like every other one in this chain.
+- **`GET /specific-knowledges/{id}/focus-tasks`** — the "app should be smart enough to find the tasks associated with that knowledge" part: returns open (todo/in_progress) Tasks *and* Subtasks linked to the SK, unified with a `kind` discriminator, sorted by priority.
+- **`POST /time-logs`** now accepts an optional `sk_id`; **`GET /dashboard/today`** gained an `achievements` field — today's `TimeLog`s that carry an `sk_id`, grouped and summed per knowledge (`services.today_achievements()`).
+- **`pages/FocusTimer.tsx`** (new page, `/focus-timer`, added to the `BottomNavBar` "More" sheet): pick a knowledge (pastel cards) → pick which of its open tasks to work on → pick a duration (15/25/45/60 min) → countdown. The countdown is driven off absolute timestamps (`Date.now()` at start + target duration) rather than a decrementing tick counter, so it stays accurate even if the tab is briefly backgrounded/throttled — matches the "Tier 1, no server push" scope decided earlier: works while the tab/PWA is open, doesn't survive the browser being fully closed.
+- **Completion**: a short Web-Audio chime (synthesized oscillator tones, no audio asset) + a browser `Notification` if permission was granted, then auto-logs the time via `POST /time-logs` with the `sk_id` attached.
+- **Today page**: new "Achievements today 🏆" `MeCard` at the very bottom, only rendered when there's at least one achievement — lists each knowledge worked on today with its rating and hours.
+- **Tests (`test_focus_timer.py`, 6 new)**: focus-tasks endpoint returns only open work linked to the right SK (excludes done items, unrelated tasks, includes subtasks with their parent title); 404 on a missing SK; time-log accepts/validates `sk_id`; achievements aggregation sums same-day sessions per SK, ignores other days, ignores sk_id-less manual logs.
+- **Verified live, not just built**: ran the full flow through the real UI — picked a knowledge, picked its one open task, started a 15-min timer, used Playwright's clock API to fast-forward past the target time (rather than waiting 15 real minutes), confirmed the completion screen fired, then confirmed via the API that the `TimeLog` was actually created with the right `sk_id`/hours and that it showed up correctly in `GET /dashboard/today`'s `achievements`, then screenshotted the Achievements panel rendering on the real Today page. **Also verified: 59 backend tests pass (53 prior + 6 new), ruff clean, tsc clean, vite build OK (main bundle +7KB), full 0001→0011 migration chain (including downgrade/re-upgrade) verified clean on SQLite.**
 
 ### 2026-07-16 — SK Universe: rebuilt with real WebGL 3D (Three.js)
 

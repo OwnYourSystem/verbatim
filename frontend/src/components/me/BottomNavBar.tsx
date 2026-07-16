@@ -14,6 +14,7 @@ const PRIMARY = [
 ];
 
 const MORE = [
+  { to: "/focus-timer", label: "Focus Timer", icon: "⏱️" },
   { to: "/proposals", label: "Proposals", icon: "🤖" },
   { to: "/intake", label: "New system", icon: "✨" },
   { to: "/reports", label: "Reports", icon: "📊" },

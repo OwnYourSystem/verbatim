@@ -7,7 +7,14 @@ from sqlalchemy.orm import Session
 from app.agents.llm import suggest_sk
 from app.db import get_db
 from app.models import SKRating, SpecificKnowledge, Subtask, Task, WorkStatus
-from app.schemas import SKCreate, SKRead, SKSuggestRequest, SKSuggestResponse, SKUpdate
+from app.schemas import (
+    SKCreate,
+    SKFocusTask,
+    SKRead,
+    SKSuggestRequest,
+    SKSuggestResponse,
+    SKUpdate,
+)
 
 router = APIRouter(prefix="/specific-knowledges", tags=["specific-knowledge"])
 
@@ -102,3 +109,47 @@ def delete_sk(sk_id: int, db: Session = Depends(get_db)):
 def suggest(body: SKSuggestRequest):
     result = suggest_sk(body.title, body.description or "")
     return SKSuggestResponse(**result)
+
+
+_OPEN_STATUSES = (WorkStatus.todo, WorkStatus.in_progress)
+
+
+@router.get("/{sk_id}/focus-tasks", response_model=list[SKFocusTask])
+def focus_tasks(sk_id: int, db: Session = Depends(get_db)):
+    """Open tasks/subtasks tied to this Specific Knowledge — the Focus
+    Timer's task picker: pick the knowledge, then pick which of its open
+    work items to spend the timer on."""
+    sk = db.get(SpecificKnowledge, sk_id)
+    if not sk:
+        raise HTTPException(404, "SK not found")
+
+    items: list[SKFocusTask] = []
+    for t in sk.tasks:
+        if t.status not in _OPEN_STATUSES:
+            continue
+        items.append(
+            SKFocusTask(
+                kind="task",
+                id=t.id,
+                title=t.title,
+                system_name=t.system.name if t.system else None,
+                status=t.status,
+                priority=t.priority,
+            )
+        )
+    for st in sk.subtasks:
+        if st.status not in _OPEN_STATUSES:
+            continue
+        items.append(
+            SKFocusTask(
+                kind="subtask",
+                id=st.id,
+                title=st.title,
+                system_name=st.task.system.name if st.task and st.task.system else None,
+                parent_task_title=st.task.title if st.task else None,
+                status=st.status,
+                priority=st.priority,
+            )
+        )
+    items.sort(key=lambda i: i.priority)
+    return items

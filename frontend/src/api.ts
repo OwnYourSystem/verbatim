@@ -12,6 +12,7 @@ import type {
   ReadingItem,
   RebalanceProposal,
   Report,
+  SKFocusTask,
   SKRating,
   SKSuggestResponse,
   SpecificKnowledge,
@@ -127,6 +128,7 @@ export const api = {
   logTime: (body: {
     task_id?: number;
     subtask_id?: number;
+    sk_id?: number;
     hours: number;
     day?: string | null;
     note?: string | null;
@@ -196,6 +198,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ title, description }),
     }),
+  getSKFocusTasks: (skId: number) =>
+    request<SKFocusTask[]>(`/specific-knowledges/${skId}/focus-tasks`),
 
   // Wall of Pains
   listPains: (area?: string) =>
