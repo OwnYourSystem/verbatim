@@ -18,7 +18,7 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 **Both frontend and backend now auto-deploy on push to `main`.** No manual deploy steps needed going forward.
 
-**Do next:** (1) Merge `fix/mobile-overflow-and-sk-autosave` (bugfixes reported after the theme toggle went live — see 2026-07-16 entry below) and deploy. (2) Build the Timer/Focus feature (pick a Specific Knowledge → find its tasks → countdown → Achievements on Today). (3) Refine SK Universe's core "sun" visual (NASA Eyes-style). (4) Smoke-test the full Product Dev flow: Wall of Pains → create project → Product Dev → sprints + stories. (5) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
+**Do next:** (1) Merge `feature/sk-universe-sun-refinement` (NASA Eyes-style sun + momentum drag + pinch-zoom — see 2026-07-16 entry below) and deploy. (2) Build the Timer/Focus feature (pick a Specific Knowledge → find its tasks → countdown → Achievements on Today). (3) Smoke-test the full Product Dev flow: Wall of Pains → create project → Product Dev → sprints + stories. (4) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
 
 **Live agent is ON:** `backend/.env` has a real (rotated) key, so `get_llm()`/`get_intake()` use real Claude when the backend runs. Not yet smoke-tested live (needs backend running against local Postgres). Tests stay offline via `tests/conftest.py`.
 
@@ -90,6 +90,16 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
 ---
 
 ## Action log
+
+### 2026-07-16 — SK Universe: NASA Eyes-style sun + momentum drag + pinch-zoom
+
+Refined the existing glowing-core + drag/tilt/zoom 3D scene toward the NASA Eyes reference the owner gave, on branch `feature/sk-universe-sun-refinement`. Kept the existing pure-CSS approach (no WebGL/Three.js) — the ask was for a "simple, light model," and the scene is small enough that CSS 3D transforms are the right tool.
+
+- **Sun core (`SunCore` in `SKUniverse.tsx`):** layered radial-gradient photosphere with a rotating granulation/flare texture clipped to the disc (`sun-surface-rotate` keyframe, 22s loop) and a slow-pulsing corona glow (`sun-corona-pulse` keyframe, 4s breathing). First attempt used `box-shadow` for both the corona and an inset "limb darkening" ring — both rasterized as a hard black ring around the disc once tilted by the scene's 3D transform (a known Chromium quirk: box-shadow can rasterize as a hard edge under an ancestor's 3D transform). Fixed by replacing both with plain `radial-gradient` backgrounds instead, which composite correctly under the tilt. Caught via a live screenshot, not guessed — the first two "fixes" still showed the ring until the box-shadow was the thing removed.
+- **Momentum drag:** replaced the old `setInterval`-based idle auto-spin with a single `requestAnimationFrame` loop that composes idle drift + release velocity. Dragging tracks instantaneous velocity (deg/ms) each pointer-move; on release, that velocity keeps driving the spin/tilt with per-frame friction decay (0.94) until it bleeds into the same constant idle drift — no jarring hand-off between "flick" and "idle."
+- **Pinch-to-zoom:** the old implementation only listened for `onWheel`, which never fires on a touchscreen — mobile had no way to zoom at all. Added multi-pointer tracking (`Map<pointerId, {x,y}>`); a second finger down switches to pinch mode, computing zoom from the ratio of current to initial two-finger distance. `touch-none` added to the scene container so the browser doesn't intercept the gesture for native scroll/zoom.
+- **Reset view button** — small top-right control to recover from an awkward zoom/tilt on a small screen, since there's no other way back to the default view once pinched far in/out.
+- **Verified live**, not just built: direct-navigated to `/sk-universe` (routing through `/` first caused Vite dev-server module-fetch aborts that looked like a data-loading bug but weren't — a test-harness artifact, confirmed by checking the actual network requests fired), confirmed the API call fires and planets render, confirmed the corona/photosphere render without the ring artifact, confirmed a mouse flick continues drifting after release and decays into the idle spin, confirmed Reset view returns to the default zoom/tilt. **Also verified: 53 backend tests pass (no backend files touched), tsc clean, vite build OK.**
 
 ### 2026-07-16 — Bugfixes reported after the theme toggle went live
 

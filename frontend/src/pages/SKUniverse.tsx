@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { SKRating, SpecificKnowledge } from "../types";
 import { ratingColor, ratingGlow, ratingLabel } from "../components/Thermometer";
@@ -7,6 +7,13 @@ import { ratingColor, ratingGlow, ratingLabel } from "../components/Thermometer"
 // HOT (rarest) orbits closest to the core; COLD orbits farthest out.
 const ORBIT: Record<SKRating, number> = { hot: 130, warm: 230, cold: 330 };
 const PLANET_SIZE: Record<SKRating, number> = { hot: 46, warm: 32, cold: 20 };
+
+const IDLE_SPIN_DEG_PER_MS = 0.006; // gentle constant drift when nothing else is happening
+const FRICTION = 0.94; // per-frame velocity decay after a flick/drag release
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 2.6;
+const MIN_TILT = 10;
+const MAX_TILT = 85;
 
 function planetColor(r: SKRating) {
   return ratingColor(r);
@@ -38,6 +45,54 @@ function assignAngles(planets: SpecificKnowledge[]): Map<number, number> {
   return result;
 }
 
+/** The sun — layered radial gradient body, a rotating granulation/flare
+ *  texture clipped to the disc, and a slow-pulsing corona glow. Pure CSS
+ *  (no WebGL), in keeping with the rest of this lightweight scene. */
+function SunCore() {
+  return (
+    <div
+      className="absolute pointer-events-none"
+      style={{ width: 96, height: 96, left: "50%", top: "50%", marginLeft: -48, marginTop: -48 }}
+    >
+      {/* Corona — soft outer glow, breathing. A radial-gradient rather than a
+          box-shadow: box-shadow can rasterize as a hard edge under an
+          ancestor's 3D transform in Chromium, which read as an unwanted
+          ring around the disc once tilted. */}
+      <div
+        className="absolute rounded-full"
+        style={{
+          inset: "-70%",
+          background:
+            "radial-gradient(circle, rgba(255,190,60,0.5) 0%, rgba(255,150,20,0.28) 38%, rgba(255,110,0,0.12) 60%, transparent 75%)",
+          animation: "sun-corona-pulse 4s ease-in-out infinite",
+        }}
+      />
+      {/* Photosphere body — gradient itself carries the limb-darkening falloff
+          toward the edge, so it survives the elliptical squash from the 3D
+          tilt without an inset-shadow ring artifact. */}
+      <div
+        className="absolute inset-0 rounded-full overflow-hidden"
+        style={{
+          background: "radial-gradient(circle at 38% 35%, #fff9d6, #ffe066 34%, #ffab1f 60%, #e8620f 82%, #b93a0a 100%)",
+        }}
+      >
+        {/* Rotating surface granulation / flare texture, clipped to the disc */}
+        <div
+          className="absolute"
+          style={{
+            inset: "-20%",
+            animation: "sun-surface-rotate 22s linear infinite",
+            background:
+              "radial-gradient(circle at 30% 70%, rgba(255,255,255,0.3), transparent 22%)," +
+              "radial-gradient(circle at 75% 30%, rgba(255,240,180,0.25), transparent 20%)," +
+              "radial-gradient(circle at 60% 80%, rgba(200,50,0,0.3), transparent 25%)",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function SKUniverse() {
   const [sks, setSks] = useState<SpecificKnowledge[]>([]);
   const [spin, setSpin] = useState(20);
@@ -45,61 +100,141 @@ export function SKUniverse() {
   const [zoom, setZoom] = useState(1);
   const [dragging, setDragging] = useState(false);
   const [tooltip, setTooltip] = useState<{ sk: SpecificKnowledge; x: number; y: number } | null>(null);
-  const last = useRef({ x: 0, y: 0 });
+
   const spinRef = useRef(20);
   const tiltRef = useRef(55);
-  const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const zoomRef = useRef(1);
+  const velocityRef = useRef({ x: 0, y: 0 }); // deg/ms, decays after release (momentum)
+  const lastPointRef = useRef({ x: 0, y: 0, t: 0 });
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchStartDistRef = useRef<number | null>(null);
+  const pinchStartZoomRef = useRef(1);
+  const rafRef = useRef<number | null>(null);
+  const draggingRef = useRef(false);
 
   useEffect(() => {
     api.listSKs().then((all) => setSks(all.filter((sk) => sk.in_universe)));
   }, []);
 
-  // Auto-spin while idle (gentle rotation), paused while the user drags.
+  // Single animation loop: idle auto-drift + momentum decay after a flick.
+  // Momentum smoothly bleeds into the same constant idle drift rather than
+  // fighting it, so there's no jarring hand-off when a flick settles.
   useEffect(() => {
-    if (dragging) {
-      if (animRef.current) clearInterval(animRef.current);
+    let lastT = performance.now();
+    const tick = (t: number) => {
+      const dt = Math.min(48, t - lastT); // clamp so a stalled tab doesn't jump
+      lastT = t;
+      if (!draggingRef.current) {
+        spinRef.current = (spinRef.current + IDLE_SPIN_DEG_PER_MS * dt + velocityRef.current.x * dt) % 360;
+        tiltRef.current = Math.max(
+          MIN_TILT,
+          Math.min(MAX_TILT, tiltRef.current + velocityRef.current.y * dt),
+        );
+        velocityRef.current.x *= FRICTION;
+        velocityRef.current.y *= FRICTION;
+        if (Math.abs(velocityRef.current.x) < 0.00002) velocityRef.current.x = 0;
+        if (Math.abs(velocityRef.current.y) < 0.00002) velocityRef.current.y = 0;
+        setSpin(spinRef.current);
+        setTilt(tiltRef.current);
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  const pinchDistance = () => {
+    const pts = [...pointersRef.current.values()];
+    if (pts.length < 2) return null;
+    const [a, b] = pts;
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pointersRef.current.size === 2) {
+      // Second finger down — switch to pinch-zoom mode.
+      pinchStartDistRef.current = pinchDistance();
+      pinchStartZoomRef.current = zoomRef.current;
+      draggingRef.current = false;
+      setDragging(false);
+    } else {
+      draggingRef.current = true;
+      setDragging(true);
+      velocityRef.current = { x: 0, y: 0 };
+      lastPointRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
+    }
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!pointersRef.current.has(e.pointerId)) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pointersRef.current.size === 2) {
+      // Pinch-to-zoom — the touch-native equivalent of the desktop scroll wheel.
+      const dist = pinchDistance();
+      if (dist && pinchStartDistRef.current) {
+        const nextZoom = pinchStartZoomRef.current * (dist / pinchStartDistRef.current);
+        zoomRef.current = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, nextZoom));
+        setZoom(zoomRef.current);
+      }
       return;
     }
-    animRef.current = setInterval(() => {
-      spinRef.current = (spinRef.current + 0.1) % 360;
-      setSpin(spinRef.current);
-    }, 16);
-    return () => { if (animRef.current) clearInterval(animRef.current); };
-  }, [dragging]);
 
-  // Drag horizontally to orbit around (spin), vertically to change the viewing
-  // angle (tilt) — i.e. move around the universe in 3D.
-  const onPointerDown = (e: React.PointerEvent) => {
-    setDragging(true);
-    last.current = { x: e.clientX, y: e.clientY };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  };
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragging) return;
-    const dx = e.clientX - last.current.x;
-    const dy = e.clientY - last.current.y;
-    last.current = { x: e.clientX, y: e.clientY };
+    if (!draggingRef.current) return;
+    const now = performance.now();
+    const dx = e.clientX - lastPointRef.current.x;
+    const dy = e.clientY - lastPointRef.current.y;
+    const dt = Math.max(1, now - lastPointRef.current.t);
+
     spinRef.current = (spinRef.current + dx * 0.4) % 360;
-    tiltRef.current = Math.max(10, Math.min(85, tiltRef.current - dy * 0.3));
+    tiltRef.current = Math.max(MIN_TILT, Math.min(MAX_TILT, tiltRef.current - dy * 0.3));
     setSpin(spinRef.current);
     setTilt(tiltRef.current);
+
+    // Track instantaneous velocity so a flick keeps drifting after release.
+    velocityRef.current = { x: (dx * 0.4) / dt, y: (-dy * 0.3) / dt };
+    lastPointRef.current = { x: e.clientX, y: e.clientY, t: now };
   };
-  const onPointerUp = () => setDragging(false);
+
+  const endPointer = (e: React.PointerEvent) => {
+    pointersRef.current.delete(e.pointerId);
+    if (pointersRef.current.size < 2) pinchStartDistRef.current = null;
+    if (pointersRef.current.size === 0) {
+      draggingRef.current = false;
+      setDragging(false);
+    }
+  };
+
   const onWheel = (e: React.WheelEvent) => {
-    setZoom((z) => Math.max(0.5, Math.min(2.2, z - e.deltaY * 0.001)));
+    zoomRef.current = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomRef.current - e.deltaY * 0.001));
+    setZoom(zoomRef.current);
   };
+
+  const resetView = useCallback(() => {
+    zoomRef.current = 1;
+    tiltRef.current = 55;
+    velocityRef.current = { x: 0, y: 0 };
+    setZoom(1);
+    setTilt(55);
+  }, []);
 
   const uniqueOrbits = [...new Set(sks.map((sk) => ORBIT[sk.rating]))].sort((a, b) => a - b);
   const angles = assignAngles(sks);
 
   return (
     <div
-      className="relative w-full overflow-hidden select-none"
+      className="relative w-full overflow-hidden select-none touch-none"
       style={{ height: "calc(100vh - 3.5rem)", background: "#020408", cursor: dragging ? "grabbing" : "grab" }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerLeave={onPointerUp}
+      onPointerUp={endPointer}
+      onPointerCancel={endPointer}
+      onPointerLeave={endPointer}
       onWheel={onWheel}
     >
       {/* Stars */}
@@ -125,8 +260,16 @@ export function SKUniverse() {
         <h1 className="text-lg font-black text-white/90 tracking-tight">
           SK <span className="text-violet-400">Universe</span>
         </h1>
-        <p className="text-[10px] text-slate-500 mt-0.5">Drag to move around · Scroll to zoom · Planets = earned knowledge</p>
+        <p className="text-[10px] text-slate-500 mt-0.5">Drag to move around · Pinch or scroll to zoom · Planets = earned knowledge</p>
       </div>
+
+      {/* Reset view */}
+      <button
+        onClick={resetView}
+        className="absolute top-4 right-4 z-20 text-[10px] font-semibold text-slate-400 hover:text-slate-200 border border-slate-700/60 hover:border-slate-500 rounded-full px-3 py-1.5 transition-colors bg-slate-950/40 backdrop-blur-sm"
+      >
+        Reset view
+      </button>
 
       {/* Legend */}
       <div className="absolute bottom-4 right-4 z-20 pointer-events-none space-y-1">
@@ -170,20 +313,7 @@ export function SKUniverse() {
             />
           ))}
 
-          {/* Core star (unlabeled) */}
-          <div
-            className="absolute rounded-full pointer-events-none"
-            style={{
-              width: 80,
-              height: 80,
-              left: "50%",
-              top: "50%",
-              marginLeft: -40,
-              marginTop: -40,
-              background: "radial-gradient(circle at 38% 38%, #fff7cc, #ffe566 40%, #ff9900 70%, #cc4400)",
-              boxShadow: "0 0 60px 25px rgba(255,180,0,0.5), 0 0 120px 50px rgba(255,120,0,0.25)",
-            }}
-          />
+          <SunCore />
 
           {/* Planets */}
           {sks.map((sk) => {
