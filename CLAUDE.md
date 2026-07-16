@@ -18,7 +18,7 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 **Both frontend and backend now auto-deploy on push to `main`.** No manual deploy steps needed going forward.
 
-**Do next:** (1) Merge `feature/theme-toggle` (full light/dark toggle across the whole app — see 2026-07-16 entry below) and deploy. (2) Build the Timer/Focus feature (pick a Specific Knowledge → find its tasks → countdown → Achievements on Today). (3) Refine SK Universe's core "sun" visual (NASA Eyes-style). (4) Smoke-test the full Product Dev flow: Wall of Pains → create project → Product Dev → sprints + stories. (5) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
+**Do next:** (1) Merge `fix/mobile-overflow-and-sk-autosave` (bugfixes reported after the theme toggle went live — see 2026-07-16 entry below) and deploy. (2) Build the Timer/Focus feature (pick a Specific Knowledge → find its tasks → countdown → Achievements on Today). (3) Refine SK Universe's core "sun" visual (NASA Eyes-style). (4) Smoke-test the full Product Dev flow: Wall of Pains → create project → Product Dev → sprints + stories. (5) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
 
 **Live agent is ON:** `backend/.env` has a real (rotated) key, so `get_llm()`/`get_intake()` use real Claude when the backend runs. Not yet smoke-tested live (needs backend running against local Postgres). Tests stay offline via `tests/conftest.py`.
 
@@ -90,6 +90,15 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
 ---
 
 ## Action log
+
+### 2026-07-16 — Bugfixes reported after the theme toggle went live
+
+Owner tested `feature/theme-toggle` on their phone and reported three issues. Two were real bugs, fixed on branch `fix/mobile-overflow-and-sk-autosave`; the third (SK Universe's core visual) is the still-pending next task, not a regression.
+
+- **Mobile horizontal-scroll bug (Calendar page cut off on the left):** the "Schedule a block" form (`Calendar.tsx`) packed a date input, two `<select>`s, a text input, and a button into one `flex flex-wrap` row. A native `<select>` can report an intrinsic width wider than its container regardless of `flex-wrap`, which pushed the whole row — and with no `overflow-x` guard anywhere, the whole `<html>` — wider than the viewport; the browser then auto-scrolled horizontally when a later field was focused, cutting off the left edge of every line including the date header. Fixed two ways: (1) `Calendar.tsx`'s form now stacks vertically (`flex-col`) below `sm:`, each field `w-full`, so it can't overflow a narrow phone; (2) added `overflow-x: hidden` to `html` in `index.css` as a global safety net so no future oversized element can ever horizontally-scroll the whole app again. Verified at a 360px viewport (matching the reported screenshot): `scrollWidth === clientWidth`, zero overflow, before and after interacting with every field.
+- **Specific Knowledge not entering the Universe on completion:** root-caused by writing a live repro against the running app rather than guessing — the backend (`services.py` finalize logic, `tasks.py`/`checkins.py` PATCH handlers, `specific_knowledges.py`'s `in_universe` computation) all checked out correct via direct API testing (attach SK + mark done → `in_universe: true`, every time). The actual bug was a UX gap in `WorkItemEditor.tsx`: clicking **Add** in the Specific-Knowledge section created the SK and added it to local component state, but only *persisted* the task↔SK link when the user separately clicked the top-level **Save** button. If a task is marked done another way first (e.g. the Today page's checkbox → check-in flow, which never touches `sk_ids`), the link was never saved, so completion couldn't put the SK in the Universe — exactly what "I created a SK in a task" as a one-step action implies happened. Fixed by making `addSK`/`removeSK` persist immediately via a scoped `{sk_ids: [...]}` PATCH the moment they're clicked, instead of waiting for a separate Save. Updated the section's help text accordingly. Verified with a full live repro through the actual UI: typed a name, clicked only **Add** (never touched Save), confirmed via API the link existed immediately, then completed the task through the real Today check-in flow, then confirmed `in_universe: true`.
+- **SK Universe's "Earth-like" sun visual — not a bug, not done yet.** This was flagged as still-pending in the prior entry's "Do next" and remains the next task (see below): refine the existing glowing-core + drag/tilt/zoom interaction toward the NASA Eyes reference the owner gave.
+- **Verified:** 53 backend tests pass (no backend files touched by these fixes), tsc clean, vite build OK.
 
 ### 2026-07-16 — Full light/dark theme toggle (whole app, not just Today)
 

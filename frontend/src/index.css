@@ -99,6 +99,11 @@ html.dark {
   html {
     font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
+    /* Safety net: no single oversized element (e.g. a native <select> sized
+       to its longest option) should ever be able to horizontally scroll the
+       whole app on mobile. Inner content that needs to scroll must opt in
+       with its own overflow-x container. */
+    overflow-x: hidden;
   }
   body {
     @apply bg-cream text-ink dark:bg-slate-950 dark:text-slate-100;

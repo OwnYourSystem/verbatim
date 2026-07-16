@@ -56,19 +56,19 @@ export function Calendar() {
       {error && <p className="text-amber-400 text-sm">{error}</p>}
 
       <Card title="Schedule a block">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
           <input
             type="date"
             value={day}
             onChange={(e) => setDay(e.target.value)}
-            className="input-base"
+            className="input-base w-full sm:w-auto"
           />
           <select
             value={systemId}
             onChange={(e) =>
               setSystemId(e.target.value === "" ? "" : Number(e.target.value))
             }
-            className="input-base"
+            className="input-base w-full sm:w-auto min-w-0"
           >
             <option value="">(no system)</option>
             {systems.map((s) => (
@@ -80,7 +80,7 @@ export function Calendar() {
           <select
             value={taskId}
             onChange={(e) => setTaskId(e.target.value === "" ? "" : Number(e.target.value))}
-            className="input-base"
+            className="input-base w-full sm:w-auto min-w-0"
             disabled={systemId === ""}
             title={systemId === "" ? "Pick a system first" : "Link a task"}
           >
@@ -92,12 +92,12 @@ export function Calendar() {
             ))}
           </select>
           <input
-            className="input-base flex-1 min-w-[140px]"
+            className="input-base w-full sm:flex-1 sm:min-w-[140px]"
             placeholder="Note (e.g. deep work)"
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
-          <button onClick={add} className="btn-primary">
+          <button onClick={add} className="btn-primary w-full sm:w-auto">
             Add
           </button>
         </div>

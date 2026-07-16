@@ -142,17 +142,26 @@ export function WorkItemEditor({
     }
   };
 
-  // Create (or reuse) the SK and attach it; the link persists on Save.
+  // Create (or reuse) the SK and attach it immediately — don't make the link
+  // depend on the user remembering to hit the separate top-level Save button
+  // (if they mark the item done another way, e.g. the Today check-in, before
+  // saving, an unattached SK would silently never make it into the Universe).
   const addSK = async () => {
     const name = skName.trim();
     if (!name) return;
     const created = await api.createSK({ name, rating: skRating });
-    setSks((prev) => (prev.some((s) => s.id === created.id) ? prev : [...prev, created]));
+    const next = sks.some((s) => s.id === created.id) ? sks : [...sks, created];
+    setSks(next);
     setSkName("");
     setSkRating("warm");
+    await onSave({ sk_ids: next.map((s) => s.id) });
   };
 
-  const removeSK = (id: number) => setSks((prev) => prev.filter((s) => s.id !== id));
+  const removeSK = async (id: number) => {
+    const next = sks.filter((s) => s.id !== id);
+    setSks(next);
+    await onSave({ sk_ids: next.map((s) => s.id) });
+  };
 
   return (
     <div className="space-y-3 rounded-xl p-3 bg-ink/5 dark:bg-slate-900/40 border border-ink/10 dark:border-slate-800">
@@ -402,7 +411,7 @@ export function WorkItemEditor({
           </button>
         </div>
         <p className="text-[10px] text-ink-soft/70 dark:text-slate-600">
-          AI suggests a HOT/WARM/COLD rating now; it's finalized when this item is completed. Changes save with the item.
+          AI suggests a HOT/WARM/COLD rating now; it's finalized when this item is completed. Attaching or removing a knowledge saves immediately.
         </p>
       </div>
 
