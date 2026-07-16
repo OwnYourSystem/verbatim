@@ -47,18 +47,20 @@ function makeSunTexture(): THREE.CanvasTexture {
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, size, size);
 
-  // Turbulent granulation blobs, tiled so the wrap seam isn't obvious.
+  // Turbulent granulation, kept diffuse and low-contrast on purpose — larger,
+  // softer blobs read as surface texture; small high-opacity ones read as a
+  // stray "planet" sitting on the sun, which is what this used to do.
   const rand = (seed: number) => {
     const x = Math.sin(seed) * 43758.5453;
     return x - Math.floor(x);
   };
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 70; i++) {
     const x = rand(i * 12.9898) * size;
     const y = rand(i * 78.233) * size;
-    const r = 10 + rand(i * 37.719) * 40;
+    const r = 34 + rand(i * 37.719) * 60;
     const tone = rand(i * 4.14);
-    const color = tone > 0.5 ? "255,250,220" : "200,60,10";
-    const alpha = 0.08 + rand(i * 91.7) * 0.15;
+    const color = tone > 0.5 ? "255,240,200" : "210,80,20";
+    const alpha = 0.05 + rand(i * 91.7) * 0.07;
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
     g.addColorStop(0, `rgba(${color},${alpha})`);
     g.addColorStop(1, "rgba(0,0,0,0)");
@@ -184,18 +186,21 @@ export function SKUniverse() {
     corona.scale.set(6, 6, 1);
     scene.add(corona);
 
-    // Orbit rings
+    // Orbit rings — a real flat annulus, not a 1px WebGL line (which can't
+    // be made visually bold via linewidth in most browsers/ANGLE). Gives an
+    // actual thickness that reads clearly regardless of zoom.
     const orbitRadii = Object.values(ORBIT);
     for (const r of orbitRadii) {
-      const points: THREE.Vector3[] = [];
-      for (let i = 0; i <= 128; i++) {
-        const a = (i / 128) * Math.PI * 2;
-        points.push(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r));
-      }
-      const ring = new THREE.LineLoop(
-        new THREE.BufferGeometry().setFromPoints(points),
-        new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.08 }),
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(r - 0.025, r + 0.025, 128),
+        new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.35,
+          side: THREE.DoubleSide,
+        }),
       );
+      ring.rotation.x = -Math.PI / 2;
       scene.add(ring);
     }
 
@@ -346,17 +351,6 @@ export function SKUniverse() {
         ))}
         <p className="text-[9px] text-slate-600 pt-1">Closer = rarer · Bigger = rarer</p>
       </div>
-
-      {/* Empty state */}
-      {sks.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="text-center">
-            <p className="text-2xl mb-3">🪐</p>
-            <p className="text-slate-400 text-sm font-medium">The universe is empty</p>
-            <p className="text-slate-600 text-xs mt-1">Complete tasks with Specific Knowledge assigned to earn planets</p>
-          </div>
-        </div>
-      )}
 
       {/* Tooltip */}
       {tooltip && (
