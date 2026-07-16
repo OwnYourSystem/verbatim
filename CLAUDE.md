@@ -18,7 +18,7 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 **Both frontend and backend now auto-deploy on push to `main`.** No manual deploy steps needed going forward.
 
-**Do next:** (1) Smoke-test the full Product Dev flow: Wall of Pains → create project → Product Dev → sprints + stories. (2) Close PR #13 (GitHub Actions manual deploy workflow — superseded by the Cloud Build trigger). (3) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
+**Do next:** (1) Smoke-test the full Product Dev flow: Wall of Pains → create project → Product Dev → sprints + stories. (2) Merge `feature/me-style-today-redesign` (ME-style pastel redesign of the shell + Today page — see 2026-07-16 entry below) and deploy. (3) Migrate remaining pages to the ME style. (4) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
 
 **Live agent is ON:** `backend/.env` has a real (rotated) key, so `get_llm()`/`get_intake()` use real Claude when the backend runs. Not yet smoke-tested live (needs backend running against local Postgres). Tests stay offline via `tests/conftest.py`.
 
@@ -90,6 +90,17 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
 ---
 
 ## Action log
+
+### 2026-07-16 — "ME style app" redesign, pass 1: shell + Today page
+
+Applied the `me-style-app` skill (soft/pastel wellness-app product culture, provided by the owner) to the app shell and the Today/Dashboard page, on branch `feature/me-style-today-redesign`. Scoped deliberately to shell + one flagship page rather than a full app rewrite, to de-risk the visual pivot; other pages (Systems, Calendar, Reports, etc.) stay on the existing dark "Cosmos" theme until migrated in later passes.
+
+- **New component library (`frontend/src/components/me/`):** `tokens.ts` (pastel palette + ink/accent tokens, JS constants — not Tailwind dynamic classes, to survive purge), `Card.tsx` (`MeCard`, `MeSectionTitle` — rounded-3xl, soft shadow, optional pastel tint), `PrimaryButton.tsx` (`PrimaryButton`, `GhostButton` — big rounded pill CTAs), `ProgressRing.tsx` (SVG circular progress), `DateHeader.tsx` (persistent month + 7-day strip with today highlighted, coach greeting), `BottomNavBar.tsx` (fixed bottom tab bar — Today/Systems/Calendar pinned, remaining 8 destinations behind a "More" bottom sheet, since 11 nav items don't fit a real bottom bar), `DraggableList.tsx` (generic `@dnd-kit`-backed reorderable grid — whole-card drag, no separate handle).
+- **Shell (`App.tsx`):** removed the old sidebar/topbar nav entirely; replaced with `DateHeader` (sticky top, shown on every non-full-bleed page) + `BottomNavBar` (fixed bottom, every page). The Today route (`/`) gets its own cream (`ME_BG`) full-page background so gaps between pastel cards aren't the dark shell bleeding through; other routes keep the dark `bg-slate-900` body — a deliberate "light chrome on dark body" transitional look that doesn't require touching every page's internals.
+- **Today page (`Dashboard.tsx`):** rebuilt around the ME components — `ProgressRing` + coach-toned copy ("1 of 4 done — keep the momentum going") atop a pastel-tinted, **drag-reorderable** grid of focus-task cards (`DraggableList`), soft chip badges for priority/status/deadline, "Coming up" / "Needs attention" panels, and an end-of-day check-in `PrimaryButton`. Old dark `Card`/`StatusBadge`/`PriorityBadge` (from `ui.tsx` / `WorkItemEditor.tsx`) are untouched and still used by every other page — Dashboard now uses local, self-contained ME styling instead so this pass can't regress other screens.
+- **Backend (`services.py`):** `_task_sort_key` now sorts by `(position, has_deadline, deadline)` instead of just `(has_deadline, deadline)`. `position` defaults to `0` on all tasks, so this is a no-op for existing data (falls through to the old deadline sort) until a drag-reorder writes distinct `position` values via `PATCH /tasks/{id}`, which then stick. This is what makes "Today's focus tasks are draggable, not fixed order" (a core ME-style requirement) actually persist across reloads instead of resetting to server-computed order.
+- **Verified live, not just built:** spun up local Postgres + backend + `vite dev` in this session, logged in, seeded a system + 4 P1 tasks, and screenshotted the real running app (not just a build check) — confirmed the pastel shell, checkbox → progress-ring → coach-copy interaction, and drag-reorder actually persisting server-side (`GET /dashboard/today` returned the new order after a page reload). Also screenshotted `/systems` to confirm the untouched dark pages still render correctly under the new cream `DateHeader`/`BottomNavBar` shell. **Also verified: ruff clean (`services.py`), 53 backend tests pass, tsc clean, vite build OK.**
+- **Scope for next pass (not done here):** migrate remaining pages (Systems, Calendar, Reports, Wall of Pains, Product Dev, etc.) to the same pastel `Me*` component set; currently only Today is fully "ME style."
 
 ### 2026-06-29 — CR-3: Product Development (Scrum) page
 

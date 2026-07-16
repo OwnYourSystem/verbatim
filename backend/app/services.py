@@ -122,9 +122,11 @@ OPEN_STATUSES = (WorkStatus.todo, WorkStatus.in_progress, WorkStatus.blocked)
 FOCUS_PRIORITY = 1  # P1 = highest
 
 
-def _task_sort_key(task: Task) -> tuple[int, date]:
-    """Earlier deadline first; tasks without a deadline sort last."""
-    return (0, task.deadline) if task.deadline else (1, date.max)
+def _task_sort_key(task: Task) -> tuple[int, int, date]:
+    """Manual drag-order first (all tasks default to position=0, so this is a
+    no-op until the user reorders), then earlier deadline; tasks without a
+    deadline sort last."""
+    return (task.position, 0, task.deadline) if task.deadline else (task.position, 1, date.max)
 
 
 def _priority_sort_key(task: Task) -> tuple[int, int, date]:

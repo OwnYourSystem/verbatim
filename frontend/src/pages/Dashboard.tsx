@@ -1,43 +1,60 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
-import type { Subtask, Task, TodayView } from "../types";
-import { Card, Empty, PageHeader, StatusBadge } from "../components/ui";
-import { PriorityBadge } from "../components/WorkItemEditor";
+import type { Task, TodayView } from "../types";
+import { MeCard, MeSectionTitle } from "../components/me/Card";
+import { ProgressRing } from "../components/me/ProgressRing";
+import { PrimaryButton } from "../components/me/PrimaryButton";
+import { DraggableList } from "../components/me/DraggableList";
+import { ME_INK, ME_INK_SOFT, pastelFor } from "../components/me/tokens";
 
 /** URL that deep-links to a specific task inside the Systems page. */
 function taskLink(t: Task) {
   return `/systems?open=${t.system_id}&task=${t.id}`;
 }
 
-/** Why a task landed in the Flagged panel: 🚩 manual flag, overdue, or blocked. */
-function FlagReasons({ task }: { task: Task }) {
-  const reasons: { label: string; color: string }[] = [];
-  if (task.flagged) reasons.push({ label: "🚩 flagged", color: "var(--color-signal-warn)" });
-  if (task.time_left_days != null && task.time_left_days < 0)
-    reasons.push({
-      label: `${Math.abs(task.time_left_days)}d overdue`,
-      color: "var(--color-signal-crit)",
-    });
-  if (task.status === "blocked")
-    reasons.push({ label: "blocked", color: "var(--color-signal-crit)" });
+function Chip({ children, tone }: { children: React.ReactNode; tone?: "crit" }) {
   return (
-    <span className="flex gap-1.5">
+    <span
+      className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+      style={{ background: "rgba(255,255,255,0.55)", color: tone === "crit" ? "#B4351A" : "inherit" }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function FlagReasons({ task }: { task: Task }) {
+  const reasons: string[] = [];
+  if (task.flagged) reasons.push("🚩 flagged");
+  if (task.time_left_days != null && task.time_left_days < 0)
+    reasons.push(`${Math.abs(task.time_left_days)}d overdue`);
+  if (task.status === "blocked") reasons.push("blocked");
+  return (
+    <span className="flex gap-1.5 flex-wrap">
       {reasons.map((r) => (
         <span
-          key={r.label}
-          className="text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap"
-          style={{ color: r.color, border: `1px solid ${r.color}`, background: "rgba(8,12,24,0.5)" }}
+          key={r}
+          className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+          style={{ background: "rgba(255,137,100,0.14)", color: "#B4351A" }}
         >
-          {r.label}
+          {r}
         </span>
       ))}
     </span>
   );
 }
 
+function coachLine(done: number, total: number): string {
+  if (total === 0) return "No must-do tasks today — a calm one. 🌿";
+  if (done === 0) return "Let's get one thing moving.";
+  if (done === total) return "Every focus task done — nice work today! 🎉";
+  return `${done} of ${total} done — keep the momentum going.`;
+}
+
 export function Dashboard() {
   const [data, setData] = useState<TodayView | null>(null);
+  const [order, setOrder] = useState<Task[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [notes, setNotes] = useState("");
@@ -46,7 +63,10 @@ export function Dashboard() {
   const load = () => {
     api
       .today()
-      .then(setData)
+      .then((d) => {
+        setData(d);
+        setOrder(d.focus_tasks);
+      })
       .catch((e) => setError(String(e)));
   };
 
@@ -74,198 +94,164 @@ export function Dashboard() {
     }
   };
 
-  if (error) return <p className="text-amber-400 text-sm">{error}</p>;
-  if (!data) return <p className="text-slate-400 text-sm">Loading…</p>;
+  const reorderFocus = async (next: Task[]) => {
+    setOrder(next);
+    // Persist the new manual order via each task's `position` — the backend
+    // sorts focus tasks by (position, deadline), so a drag here sticks.
+    try {
+      await Promise.all(next.map((t, i) => api.updateTask(t.id, { position: (i + 1) * 10 })));
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  if (error) return <p className="text-amber-700 text-sm">{error}</p>;
+  if (!data) return <p className="text-sm" style={{ color: ME_INK_SOFT }}>Loading…</p>;
+
+  const doneCount = order.filter((t) => selected.has(t.id)).length;
+  const progressPct = order.length ? (doneCount / order.length) * 100 : 0;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={<>Today <span className="text-slate-600 font-medium">·</span> <span className="text-gradient">{data.day}</span></>}
-        subtitle="Your single point of focus for the day."
-      />
-
-      <Card title="Today's focus">
-        {data.focus_tasks.length > 0 ? (
+    <div className="space-y-5 pt-1">
+      <MeCard>
+        <div className="flex items-center gap-4">
+          <ProgressRing value={progressPct} label={`${doneCount}/${order.length}`} />
           <div>
-            <div className="flex items-center gap-2 mb-5">
-              <span
-                className="text-[11px] font-bold px-2 py-0.5 rounded-md"
-                style={{ color: "var(--color-signal-crit)", border: "1px solid var(--color-signal-crit)", background: "rgba(8,12,24,0.6)" }}
-              >
-                P{Math.min(...data.focus_tasks.map((t) => t.priority))} — highest priority
-              </span>
-              <span className="text-[11px] text-slate-500">
-                Pick a card, get it done.
-              </span>
-            </div>
-            {/* Sticky-note wall */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {data.focus_tasks.map((t, idx) => {
-                const subtasks = data.focus_subtasks.filter((st: Subtask) => st.task_id === t.id);
-                const done = selected.has(t.id);
-                /* Rotate alternates slightly for a pinboard feel */
-                const rotate = ["-rotate-1", "rotate-1", "-rotate-[0.5deg]", "rotate-[0.5deg]"][idx % 4];
-                /* Accent colours cycle through warm sticky-note hues */
-                const accent = [
-                  { bg: "#fef08a", text: "#713f12" },   // yellow
-                  { bg: "#bbf7d0", text: "#14532d" },   // mint
-                  { bg: "#fed7aa", text: "#7c2d12" },   // peach
-                  { bg: "#c7d2fe", text: "#312e81" },   // lavender
-                  { bg: "#fecdd3", text: "#881337" },   // rose
-                ][idx % 5];
+            <MeSectionTitle>Today's focus</MeSectionTitle>
+            <p className="text-sm" style={{ color: ME_INK_SOFT }}>
+              {coachLine(doneCount, order.length)}
+            </p>
+          </div>
+        </div>
+      </MeCard>
 
-                return (
-                  <div
-                    key={t.id}
-                    className={`relative flex flex-col rounded-sm shadow-xl transition-transform duration-200 hover:scale-[1.03] hover:z-10 cursor-default ${rotate} ${done ? "opacity-50" : ""}`}
-                    style={{
-                      background: accent.bg,
-                      boxShadow: "4px 4px 10px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.3)",
-                      minHeight: "160px",
-                    }}
-                  >
-                    {/* Tape strip at top */}
-                    <div
-                      className="absolute -top-3 left-1/2 -translate-x-1/2 w-10 h-6 rounded-sm opacity-60"
-                      style={{ background: "rgba(255,255,255,0.55)", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}
-                    />
-
-                    <div className="p-4 pt-5 flex flex-col gap-2 flex-1">
-                      {/* System badge */}
-                      {t.system_name && (
-                        <span
-                          className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded self-start"
-                          style={{ background: "rgba(0,0,0,0.12)", color: accent.text }}
-                        >
-                          {t.system_name}
-                        </span>
-                      )}
-
-                      {/* Task title + checkbox */}
-                      <label className="flex items-start gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={done}
-                          onChange={() => toggle(t.id)}
-                          className="mt-0.5 h-4 w-4 rounded shrink-0 accent-emerald-600"
-                        />
-                        <Link
-                          to={taskLink(t)}
-                          className={`text-sm font-bold leading-snug transition-colors hover:underline ${done ? "line-through opacity-50" : ""}`}
-                          style={{ color: accent.text }}
-                        >
-                          {t.title}
-                          {t.flagged && <span className="ml-1 text-red-600">!</span>}
-                        </Link>
-                      </label>
-
-                      {/* Priority + status + deadline row */}
-                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                        <PriorityBadge priority={t.priority} />
-                        <StatusBadge status={t.status} />
-                        {t.deadline && (
-                          <span
-                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                            style={{ background: "rgba(0,0,0,0.1)", color: accent.text }}
-                          >
-                            {t.deadline}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Subtasks */}
-                      {subtasks.length > 0 && (
-                        <ul className="mt-1 space-y-1 border-t pt-2" style={{ borderColor: "rgba(0,0,0,0.1)" }}>
-                          {subtasks.map((st: Subtask) => (
-                            <li key={st.id} className="flex items-start gap-1.5 text-xs" style={{ color: accent.text }}>
-                              <span className="mt-0.5 shrink-0 opacity-60">↳</span>
-                              <Link
-                                to={`/systems?open=${t.system_id}&task=${t.id}`}
-                                className="flex-1 leading-snug hover:underline opacity-80 hover:opacity-100"
-                              >
-                                {st.title}
-                                {st.flagged && <span className="ml-1 text-red-600">!</span>}
-                              </Link>
-                              <StatusBadge status={st.status} />
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-
-                    {/* Bottom-right open link */}
+      {order.length > 0 ? (
+        <DraggableList
+          items={order}
+          getId={(t) => t.id}
+          onReorder={reorderFocus}
+          className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+          renderItem={(t) => {
+            const subtasks = data.focus_subtasks.filter((st) => st.task_id === t.id);
+            const done = selected.has(t.id);
+            const tint = pastelFor(t.id);
+            return (
+              <MeCard tint={tint} className={done ? "opacity-60" : ""}>
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={done}
+                    onChange={() => toggle(t.id)}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="mt-1 h-5 w-5 rounded-full shrink-0 accent-current cursor-pointer"
+                  />
+                  <div className="flex-1 min-w-0">
                     <Link
                       to={taskLink(t)}
-                      className="self-end px-3 pb-2 text-[10px] opacity-40 hover:opacity-80 transition-opacity"
-                      style={{ color: accent.text }}
-                      title="Open in Systems"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className={`text-sm font-bold leading-snug hover:underline ${done ? "line-through opacity-60" : ""}`}
                     >
-                      open →
+                      {t.title}
                     </Link>
+                    {t.system_name && (
+                      <p className="text-[10px] font-semibold uppercase tracking-wide opacity-70 mt-0.5">
+                        {t.system_name}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                      <Chip tone="crit">P{t.priority}</Chip>
+                      <Chip>{t.status.replace("_", " ")}</Chip>
+                      {t.deadline && <Chip>{t.deadline}</Chip>}
+                    </div>
+                    {subtasks.length > 0 && (
+                      <ul className="mt-2 space-y-1 pt-2 border-t" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
+                        {subtasks.map((st) => (
+                          <li key={st.id} className="flex items-start gap-1.5 text-xs opacity-80">
+                            <span className="shrink-0">↳</span>
+                            <Link
+                              to={`/systems?open=${t.system_id}&task=${t.id}`}
+                              onPointerDown={(e) => e.stopPropagation()}
+                              className="flex-1 leading-snug hover:underline"
+                            >
+                              {st.title}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <Empty>
+                </div>
+              </MeCard>
+            );
+          }}
+        />
+      ) : (
+        <MeCard>
+          <p className="text-sm" style={{ color: ME_INK_SOFT }}>
             No P1 tasks in Todo or In Progress. Set a task's priority to P1 to see it here.
-          </Empty>
-        )}
-      </Card>
+          </p>
+        </MeCard>
+      )}
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card title="Upcoming deadlines (next 7 days)">
-          <ul className="space-y-2.5">
+      <div className="grid sm:grid-cols-2 gap-3">
+        <MeCard>
+          <MeSectionTitle>Coming up (7 days)</MeSectionTitle>
+          <ul className="space-y-2">
             {data.upcoming_deadlines.map((t) => (
-              <li key={t.id} className="flex items-center gap-2 text-sm group">
-                <Link to={taskLink(t)} className="flex-1 group-hover:text-emerald-300 transition-colors">
+              <li key={t.id} className="flex items-center gap-2 text-sm">
+                <Link to={taskLink(t)} className="flex-1 truncate hover:underline">
                   {t.title}
                 </Link>
-                {t.system_name && (
-                  <span className="text-[10px] text-slate-500 hidden sm:inline">{t.system_name}</span>
-                )}
-                <span className="text-xs font-medium text-amber-300/90 bg-amber-500/10 border border-amber-500/30 rounded-full px-2.5 py-0.5 whitespace-nowrap">
-                  {t.deadline}
-                </span>
-                <Link to={taskLink(t)} className="text-[10px] text-slate-600 hover:text-emerald-400 transition-colors" title="Open in Systems">→</Link>
+                <Chip>{t.deadline}</Chip>
               </li>
             ))}
-            {data.upcoming_deadlines.length === 0 && <Empty>Nothing due soon.</Empty>}
+            {data.upcoming_deadlines.length === 0 && (
+              <p className="text-sm" style={{ color: ME_INK_SOFT }}>
+                Nothing due soon. 🌤️
+              </p>
+            )}
           </ul>
-        </Card>
+        </MeCard>
 
-        <Card title="Flagged (🚩 raised, overdue or blocked)">
-          <ul className="space-y-2.5">
+        <MeCard>
+          <MeSectionTitle>Needs attention</MeSectionTitle>
+          <ul className="space-y-2">
             {data.flagged.map((t) => (
-              <li key={t.id} className="flex items-center gap-2 text-sm group">
-                <PriorityBadge priority={t.priority} />
-                <Link to={taskLink(t)} className="flex-1 group-hover:text-emerald-300 transition-colors">{t.title}</Link>
+              <li key={t.id} className="flex items-center gap-2 text-sm">
+                <Link to={taskLink(t)} className="flex-1 truncate hover:underline">
+                  {t.title}
+                </Link>
                 <FlagReasons task={t} />
-                <StatusBadge status={t.status} />
-                <Link to={taskLink(t)} className="text-[10px] text-slate-600 hover:text-emerald-400 transition-colors" title="Open in Systems">→</Link>
               </li>
             ))}
-            {data.flagged.length === 0 && <Empty>Nothing flagged.</Empty>}
+            {data.flagged.length === 0 && (
+              <p className="text-sm" style={{ color: ME_INK_SOFT }}>
+                Nothing flagged. Clear skies. ☀️
+              </p>
+            )}
           </ul>
-        </Card>
+        </MeCard>
       </div>
 
-      <Card title="End-of-day check-in">
-        <p className="text-sm text-slate-400 mb-3">
-          Tick what you completed above, add a note, and close the loop.
+      <MeCard>
+        <MeSectionTitle>End-of-day check-in</MeSectionTitle>
+        <p className="text-sm mb-3" style={{ color: ME_INK_SOFT }}>
+          Tick what you completed above, jot a note, and close the loop.
         </p>
         <textarea
-          className="input-base w-full"
+          className="w-full rounded-2xl px-3 py-2 text-sm resize-none"
+          style={{ background: "rgba(60,50,40,0.04)", color: ME_INK, border: "1px solid rgba(60,50,40,0.08)" }}
           rows={2}
           placeholder="What got done today?"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />
-        <button onClick={submitCheckIn} disabled={saving} className="btn-primary mt-3">
-          {saving ? "Saving…" : `Submit check-in (${selected.size} done)`}
-        </button>
-      </Card>
+        <div className="mt-3">
+          <PrimaryButton onClick={submitCheckIn} disabled={saving}>
+            {saving ? "Saving…" : `Submit check-in (${selected.size} done)`}
+          </PrimaryButton>
+        </div>
+      </MeCard>
     </div>
   );
 }
