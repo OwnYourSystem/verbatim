@@ -13,6 +13,7 @@ import { SKUniverse } from "./pages/SKUniverse";
 import { CheckOutASAP } from "./pages/CheckOutASAP";
 import { WallOfPains } from "./pages/WallOfPains";
 import { ProductDev } from "./pages/ProductDev";
+import { ThemeProvider } from "./theme";
 import "./index.css";
 
 const router = createBrowserRouter([
@@ -37,6 +38,8 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <ThemeProvider>
+      <RouterProvider router={router} />
+    </ThemeProvider>
   </React.StrictMode>,
 );

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ME_BORDER, ME_INK, ME_SHADOW } from "./tokens";
+import { ME_BORDER, ME_INK, ME_SHADOW, ME_SURFACE } from "./tokens";
 
 export function MeCard({
   children,
@@ -16,7 +16,7 @@ export function MeCard({
     <section
       className={`rounded-3xl border p-4 transition-transform duration-200 ${className}`}
       style={{
-        background: tint?.bg ?? "#FFFFFF",
+        background: tint?.bg ?? ME_SURFACE,
         color: tint?.text ?? ME_INK,
         borderColor: ME_BORDER,
         boxShadow: ME_SHADOW,

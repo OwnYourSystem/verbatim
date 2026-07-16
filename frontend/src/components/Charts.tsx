@@ -15,12 +15,12 @@ function BarChart({ chart }: { chart: Chart }) {
       {chart.points.map((p, i) => (
         <div key={i}>
           <div className="flex justify-between text-[11px] mb-1">
-            <span className="text-slate-300">{p.label}</span>
-            <span className="metric text-slate-400">
+            <span className="text-ink/80 dark:text-slate-300">{p.label}</span>
+            <span className="metric text-ink-soft dark:text-slate-400">
               {fmt(p.value)}
               {chart.unit}
               {p.secondary != null && (
-                <span className="text-slate-500">
+                <span className="text-ink-soft dark:text-slate-500">
                   {" "}
                   · {fmt(p.secondary)}
                   {chart.unit} spent
@@ -93,8 +93,8 @@ function PieChart({ chart }: { chart: Chart }) {
               className="h-2.5 w-2.5 rounded-sm"
               style={{ background: p.color ?? palette[i % palette.length] }}
             />
-            <span className="text-slate-300">{p.label}</span>
-            <span className="metric text-slate-500">{fmt(p.value)}</span>
+            <span className="text-ink/80 dark:text-slate-300">{p.label}</span>
+            <span className="metric text-ink-soft dark:text-slate-500">{fmt(p.value)}</span>
           </li>
         ))}
       </ul>
@@ -157,7 +157,7 @@ function ChartFrame({ chart, children }: { chart: Chart; children: React.ReactNo
       className="rounded-2xl p-4"
       style={{ background: "rgba(8,12,24,0.6)", border: "1px solid rgba(120,140,220,0.12)" }}
     >
-      <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-3">
+      <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-soft dark:text-slate-400 mb-3">
         {chart.title}
         {chart.unit ? ` (${chart.unit})` : ""}
       </h3>
@@ -171,7 +171,7 @@ export function ChartView({ chart }: { chart: Chart }) {
   if (empty) {
     return (
       <ChartFrame chart={chart}>
-        <p className="text-xs text-slate-500">No data yet.</p>
+        <p className="text-xs text-ink-soft dark:text-slate-500">No data yet.</p>
       </ChartFrame>
     );
   }

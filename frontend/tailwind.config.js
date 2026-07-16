@@ -1,8 +1,16 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: "selector",
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        cream: "#FBF8F3",
+        paper: "#FFFFFF",
+        ink: "#3B3A45",
+        "ink-soft": "#8D889B",
+      },
+    },
   },
   plugins: [
     // scrollbar-none utility for the mobile nav strip

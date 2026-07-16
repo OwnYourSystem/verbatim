@@ -3,23 +3,96 @@
 @tailwind utilities;
 
 :root {
-  /* Cosmos tokens — see docs/COSMOS_REPORTS_REDESIGN.md */
+  /* Cosmos tokens — see docs/COSMOS_REPORTS_REDESIGN.md
+     Light values are the default; html.dark overrides below restore the
+     original "Cosmos" dark palette. Signal colors (ok/warn/crit/idle) stay
+     constant across themes — they're attention colors, not surfaces. */
+  --color-void: #fbf8f3;
+  --color-space: #ffffff;
+  --color-deep: #f3efe7;
+  --color-hull: #ffffff;
+  --color-signal-ok: #16a374;
+  --color-signal-warn: #c9791a;
+  --color-signal-crit: #e0304f;
+  --color-signal-idle: #5b6b93;
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(60, 50, 40, 0.08);
+  --glow-ok: 0 0 16px rgba(22, 163, 116, 0.25);
+  --glow-warn: 0 0 16px rgba(201, 121, 26, 0.25);
+  --glow-crit: 0 0 16px rgba(224, 48, 79, 0.25);
+  --glow-ui: 0 0 20px rgba(99, 60, 255, 0.18);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --focus-ring: 0 0 0 3px rgba(99, 60, 255, 0.4);
+
+  /* ME-style tokens — app shell + Today page. Accent stays constant across
+     themes (brand color); surfaces/text/borders swap. */
+  --me-bg: #fbf8f3;
+  --me-surface: #ffffff;
+  --me-surface-soft: rgba(251, 248, 243, 0.94);
+  --me-ink: #3b3a45;
+  --me-ink-soft: #8d889b;
+  --me-border: rgba(60, 50, 40, 0.07);
+  --me-shadow: 0 10px 30px rgba(60, 50, 40, 0.08);
+  --me-overlay: rgba(59, 58, 69, 0.35);
+  --me-input-bg: rgba(60, 50, 40, 0.04);
+  --me-chip-bg: rgba(255, 255, 255, 0.55);
+  --me-ghost-bg: rgba(60, 50, 40, 0.06);
+  --me-accent: #ff8964;
+  --me-accent-dark: #f06a46;
+  --me-accent-tint: rgba(255, 137, 100, 0.14);
+  --me-teal: #4fbfa8;
+
+  --me-pastel-mint-bg: #e3f5ec;
+  --me-pastel-mint-text: #1f6b4a;
+  --me-pastel-lavender-bg: #ece7fa;
+  --me-pastel-lavender-text: #4a3e86;
+  --me-pastel-peach-bg: #fdecdd;
+  --me-pastel-peach-text: #92471b;
+  --me-pastel-sky-bg: #e3f1fb;
+  --me-pastel-sky-text: #205a8c;
+  --me-pastel-blush-bg: #fbe7ee;
+  --me-pastel-blush-text: #99315c;
+  --me-pastel-butter-bg: #fcf3d6;
+  --me-pastel-butter-text: #8a6d12;
+}
+
+html.dark {
   --color-void: #03040a;
   --color-space: #080c18;
   --color-deep: #0b1025;
   --color-hull: #0f1630;
-  --color-signal-ok: #00e5a0;
-  --color-signal-warn: #f5a623;
-  --color-signal-crit: #ff4b6e;
-  --color-signal-idle: #6b82b5;
   --glass-bg: rgba(15, 22, 48, 0.55);
   --glass-border: rgba(120, 140, 220, 0.18);
   --glow-ok: 0 0 16px rgba(0, 229, 160, 0.35);
   --glow-warn: 0 0 16px rgba(245, 166, 35, 0.35);
   --glow-crit: 0 0 16px rgba(255, 75, 110, 0.35);
   --glow-ui: 0 0 20px rgba(99, 60, 255, 0.25);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --focus-ring: 0 0 0 3px rgba(99, 60, 255, 0.55);
+
+  --me-bg: #080c18;
+  --me-surface: #0f1630;
+  --me-surface-soft: rgba(8, 12, 24, 0.9);
+  --me-ink: #e6e9f5;
+  --me-ink-soft: #8b93b8;
+  --me-border: rgba(148, 163, 184, 0.14);
+  --me-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --me-overlay: rgba(0, 0, 0, 0.55);
+  --me-input-bg: rgba(148, 163, 184, 0.08);
+  --me-chip-bg: rgba(255, 255, 255, 0.08);
+  --me-ghost-bg: rgba(148, 163, 184, 0.1);
+
+  --me-pastel-mint-bg: #123024;
+  --me-pastel-mint-text: #7fdbaf;
+  --me-pastel-lavender-bg: #221c3d;
+  --me-pastel-lavender-text: #b9a9f2;
+  --me-pastel-peach-bg: #3a2013;
+  --me-pastel-peach-text: #f4a876;
+  --me-pastel-sky-bg: #112a3d;
+  --me-pastel-sky-text: #7fc2ef;
+  --me-pastel-blush-bg: #3a1524;
+  --me-pastel-blush-text: #f4a0c0;
+  --me-pastel-butter-bg: #332b0c;
+  --me-pastel-butter-text: #e8ce6c;
 }
 
 @layer base {
@@ -28,7 +101,7 @@
     -webkit-font-smoothing: antialiased;
   }
   body {
-    @apply bg-slate-950 text-slate-100;
+    @apply bg-cream text-ink dark:bg-slate-950 dark:text-slate-100;
   }
 }
 
@@ -43,8 +116,9 @@
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
-      text-slate-200 bg-slate-800/80 border border-slate-700/80
-      transition-all duration-200 hover:bg-slate-700/80 hover:border-slate-600 active:scale-[0.98]
+      text-ink bg-paper border border-ink/10
+      dark:text-slate-200 dark:bg-slate-800/80 dark:border-slate-700/80
+      transition-all duration-200 hover:bg-ink/5 dark:hover:bg-slate-700/80 hover:border-ink/20 dark:hover:border-slate-600 active:scale-[0.98]
       disabled:opacity-50 disabled:pointer-events-none;
   }
   .btn-accent {
@@ -55,11 +129,11 @@
       disabled:opacity-50 disabled:pointer-events-none;
   }
   .btn-ghost-danger {
-    @apply text-xs text-slate-500 transition-colors duration-150 hover:text-rose-400;
+    @apply text-xs text-ink-soft dark:text-slate-500 transition-colors duration-150 hover:text-rose-500 dark:hover:text-rose-400;
   }
   .input-base {
-    @apply rounded-lg bg-slate-900/80 border border-slate-700/80 px-3 py-2 text-sm
-      placeholder:text-slate-500 transition-all duration-200
+    @apply rounded-lg bg-paper border border-ink/10 dark:bg-slate-900/80 dark:border-slate-700/80 px-3 py-2 text-sm
+      placeholder:text-ink-soft/70 dark:placeholder:text-slate-500 transition-all duration-200
       focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/20;
   }
 
@@ -69,8 +143,11 @@
     border: 1px solid var(--glass-border);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 24px 48px rgba(0, 0, 0, 0.4);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 24px 48px rgba(60, 50, 40, 0.1);
     @apply rounded-3xl;
+  }
+  html.dark .glass-panel {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 24px 48px rgba(0, 0, 0, 0.4);
   }
   .metric {
     font-family: "JetBrains Mono", ui-monospace, monospace;
@@ -80,9 +157,12 @@
   .cosmos-btn-primary {
     @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold
       transition-all duration-200 active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none;
-    color: var(--color-void);
+    color: #ffffff;
     background: linear-gradient(135deg, #00c27a, #00e5a0);
     box-shadow: var(--glow-ok);
+  }
+  html.dark .cosmos-btn-primary {
+    color: var(--color-void);
   }
   .cosmos-btn-primary:hover {
     filter: brightness(1.1);
@@ -90,6 +170,11 @@
   .cosmos-btn-secondary {
     @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium
       transition-all duration-200 active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none;
+    color: rgba(99, 60, 255, 0.9);
+    background: rgba(99, 60, 255, 0.1);
+    border: 1px solid rgba(99, 60, 255, 0.25);
+  }
+  html.dark .cosmos-btn-secondary {
     color: rgba(180, 160, 255, 0.9);
     background: rgba(99, 60, 255, 0.15);
     border: 1px solid rgba(99, 60, 255, 0.35);
@@ -99,15 +184,14 @@
     box-shadow: var(--glow-ui);
   }
   .skeleton-bone {
-    background: linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.03) 25%,
-      rgba(255, 255, 255, 0.07) 50%,
-      rgba(255, 255, 255, 0.03) 75%
-    );
+    background: linear-gradient(90deg, rgba(60, 50, 40, 0.04) 25%, rgba(60, 50, 40, 0.08) 50%, rgba(60, 50, 40, 0.04) 75%);
     background-size: 200% 100%;
     animation: shimmer 1.4s ease-in-out infinite;
     @apply rounded-xl;
+  }
+  html.dark .skeleton-bone {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.07) 50%, rgba(255, 255, 255, 0.03) 75%);
+    background-size: 200% 100%;
   }
 }
 

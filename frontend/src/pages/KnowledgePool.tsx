@@ -87,9 +87,9 @@ export function KnowledgePool() {
 
       {/* Add form */}
       {adding && (
-        <div className="flex flex-wrap gap-3 items-end p-4 rounded-xl border border-emerald-500/30 bg-slate-900/60">
+        <div className="flex flex-wrap gap-3 items-end p-4 rounded-xl border border-emerald-500/30 bg-ink/10 dark:bg-slate-900/60">
           <div className="flex-1 min-w-48">
-            <label className="text-[10px] text-slate-400 uppercase tracking-wider">Name</label>
+            <label className="text-[10px] text-ink-soft dark:text-slate-400 uppercase tracking-wider">Name</label>
             <input
               autoFocus
               value={newName}
@@ -100,7 +100,7 @@ export function KnowledgePool() {
             />
           </div>
           <div>
-            <label className="text-[10px] text-slate-400 uppercase tracking-wider">Rating</label>
+            <label className="text-[10px] text-ink-soft dark:text-slate-400 uppercase tracking-wider">Rating</label>
             <div className="flex gap-1 mt-1">
               {RATINGS.map((r) => (
                 <button
@@ -120,14 +120,14 @@ export function KnowledgePool() {
           </div>
           <div className="flex gap-2">
             <button onClick={addSK} className="btn-primary text-sm">Save</button>
-            <button onClick={() => setAdding(false)} className="text-sm text-slate-500 hover:text-slate-300">Cancel</button>
+            <button onClick={() => setAdding(false)} className="text-sm text-ink-soft dark:text-slate-500 hover:text-ink dark:hover:text-slate-300">Cancel</button>
           </div>
         </div>
       )}
 
       {/* SK grid */}
       {filtered.length === 0 ? (
-        <p className="text-slate-500 text-sm italic">
+        <p className="text-ink-soft dark:text-slate-500 text-sm italic">
           {sks.length === 0
             ? "No specific knowledge yet. Define SKs on your tasks to populate this pool."
             : "No SKs in this rating."}
@@ -140,7 +140,7 @@ export function KnowledgePool() {
             return (
               <div
                 key={sk.id}
-                className="rounded-xl border bg-slate-900/70 p-4 flex gap-3 items-start"
+                className="rounded-xl border bg-ink/10 dark:bg-slate-900/70 p-4 flex gap-3 items-start"
                 style={{ borderColor: `${color}33`, transition: "border-color 0.25s" }}
               >
                 {/* Thermometer — click a zone to override the rating */}
@@ -159,13 +159,13 @@ export function KnowledgePool() {
                       />
                       <div className="flex gap-2">
                         <button onClick={() => saveEditName(sk.id)} className="btn-primary text-xs py-1">Save</button>
-                        <button onClick={() => setEditId(null)} className="text-xs text-slate-500">Cancel</button>
+                        <button onClick={() => setEditId(null)} className="text-xs text-ink-soft dark:text-slate-500">Cancel</button>
                       </div>
                     </div>
                   ) : (
                     <>
                       <div className="flex items-start gap-1.5 flex-wrap">
-                        <span className="font-semibold text-sm text-slate-100 leading-tight">{sk.name}</span>
+                        <span className="font-semibold text-sm text-ink dark:text-slate-100 leading-tight">{sk.name}</span>
                         {sk.in_universe && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30 shrink-0">
                             In Universe
@@ -179,31 +179,31 @@ export function KnowledgePool() {
                         >
                           {ratingLabel(sk.rating)}
                         </span>
-                        <span className="text-[10px] text-slate-500">
+                        <span className="text-[10px] text-ink-soft dark:text-slate-500">
                           {sk.task_count} task{sk.task_count !== 1 ? "s" : ""}
                           {sk.completed_count > 0 && ` · ${sk.completed_count} done`}
                         </span>
                         {!sk.rating_finalized && (
-                          <span className="text-[9px] text-slate-600 italic" title="AI will finalize this on completion">
+                          <span className="text-[9px] text-ink-soft/70 dark:text-slate-600 italic" title="AI will finalize this on completion">
                             suggested
                           </span>
                         )}
                       </div>
                       {sk.ai_justification && (
-                        <p className="text-[10px] text-slate-500 mt-1.5 leading-snug line-clamp-2">
+                        <p className="text-[10px] text-ink-soft dark:text-slate-500 mt-1.5 leading-snug line-clamp-2">
                           {sk.ai_justification}
                         </p>
                       )}
                       <div className="flex gap-3 mt-2">
                         <button
                           onClick={() => { setEditId(sk.id); setEditName(sk.name); }}
-                          className="text-[10px] text-slate-500 hover:text-emerald-400 transition-colors"
+                          className="text-[10px] text-ink-soft dark:text-slate-500 hover:text-emerald-400 transition-colors"
                         >
                           Rename
                         </button>
                         <button
                           onClick={() => del(sk.id)}
-                          className="text-[10px] text-slate-500 hover:text-red-400 transition-colors"
+                          className="text-[10px] text-ink-soft dark:text-slate-500 hover:text-red-400 transition-colors"
                         >
                           Delete
                         </button>

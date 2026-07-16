@@ -114,12 +114,12 @@ export function Calendar() {
                   aria-hidden
                   className="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 shadow shadow-emerald-500/40"
                 />
-                <div className="text-sm font-semibold text-slate-200">{d}</div>
+                <div className="text-sm font-semibold text-ink dark:text-slate-200">{d}</div>
                 <ul className="mt-1.5 space-y-1.5">
                   {items.map((b) => (
                     <li
                       key={b.id}
-                      className="flex items-center gap-2 text-sm rounded-lg px-3 py-2 bg-slate-900/50 border border-slate-800 transition-colors hover:border-slate-700"
+                      className="flex items-center gap-2 text-sm rounded-lg px-3 py-2 bg-ink/10 dark:bg-slate-900/50 border border-ink/10 dark:border-slate-800 transition-colors hover:border-ink/20 dark:hover:border-slate-700"
                     >
                       {b.system_name && (
                         <span className="text-emerald-300/80 text-xs font-medium whitespace-nowrap">
@@ -131,7 +131,7 @@ export function Calendar() {
                           {b.task_title}
                         </span>
                       )}
-                      <span className="flex-1 text-slate-300">{b.note}</span>
+                      <span className="flex-1 text-ink/80 dark:text-slate-300">{b.note}</span>
                       <button
                         onClick={async () => {
                           await api.deleteFocusBlock(b.id);

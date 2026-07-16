@@ -73,11 +73,11 @@ export function Intake() {
           <ul className="space-y-3 text-sm">
             {history.map((h, i) => (
               <li key={i} className="space-y-1">
-                <div className="text-slate-400 flex gap-2">
+                <div className="text-ink-soft dark:text-slate-400 flex gap-2">
                   <span aria-hidden className="text-emerald-400/70">Q</span>
                   {h.question}
                 </div>
-                <div className="pl-5 text-slate-100">{h.answer}</div>
+                <div className="pl-5 text-ink dark:text-slate-100">{h.answer}</div>
               </li>
             ))}
           </ul>
@@ -111,7 +111,7 @@ export function Intake() {
               (f) =>
                 proposal.system[f] ? (
                   <div key={f}>
-                    <span className="text-slate-400 capitalize">
+                    <span className="text-ink-soft dark:text-slate-400 capitalize">
                       {f.replace("_", " ")}:
                     </span>{" "}
                     {proposal.system[f]}
@@ -120,7 +120,7 @@ export function Intake() {
             )}
           </div>
 
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 mt-5 mb-2">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-soft dark:text-slate-500 mt-5 mb-2">
             Proposed tasks
           </h3>
           {proposal.tasks.length === 0 ? (
@@ -128,7 +128,7 @@ export function Intake() {
           ) : (
             <ul className="space-y-2.5 text-sm">
               {proposal.tasks.map((t, i) => (
-                <li key={i} className="rounded-xl px-3 py-2.5 bg-slate-900/50 border border-slate-800">
+                <li key={i} className="rounded-xl px-3 py-2.5 bg-ink/10 dark:bg-slate-900/50 border border-ink/10 dark:border-slate-800">
                   <div className="flex items-center gap-2 flex-wrap">
                     {t.priority != null && (
                       <span className="metric text-[10px] font-bold px-1.5 py-0.5 rounded-md border border-emerald-500/40 text-emerald-300">
@@ -137,33 +137,33 @@ export function Intake() {
                     )}
                     <span className="font-semibold">{t.title}</span>
                     {t.dedicated_hours != null && t.dedicated_hours > 0 && (
-                      <span className="metric text-[10px] text-slate-400">{t.dedicated_hours}h</span>
+                      <span className="metric text-[10px] text-ink-soft dark:text-slate-400">{t.dedicated_hours}h</span>
                     )}
                     {t.last_checkpoint && (
-                      <span className="text-[10px] text-slate-400 px-1.5 py-0.5 rounded bg-slate-800">
+                      <span className="text-[10px] text-ink-soft dark:text-slate-400 px-1.5 py-0.5 rounded bg-paper dark:bg-slate-800">
                         {t.last_checkpoint}
                       </span>
                     )}
                     {t.deadline && (
-                      <span className="text-[10px] text-slate-400">due {t.deadline}</span>
+                      <span className="text-[10px] text-ink-soft dark:text-slate-400">due {t.deadline}</span>
                     )}
                     {t.data_exposure_concern && <span title="Data exposure">🔒</span>}
                     {t.required_demo && <span title="Demo required">🎬</span>}
                   </div>
                   {t.description && (
-                    <p className="mt-1 text-xs text-slate-400">{t.description}</p>
+                    <p className="mt-1 text-xs text-ink-soft dark:text-slate-400">{t.description}</p>
                   )}
                   {t.subtasks.length > 0 && (
-                    <ul className="mt-1.5 pl-4 space-y-0.5 text-slate-400">
+                    <ul className="mt-1.5 pl-4 space-y-0.5 text-ink-soft dark:text-slate-400">
                       {t.subtasks.map((st, j) => (
                         <li key={j} className="flex items-center gap-1.5">
-                          <span className="text-slate-600">•</span>
+                          <span className="text-ink-soft/70 dark:text-slate-600">•</span>
                           {st.priority != null && (
                             <span className="metric text-[9px] text-emerald-300/70">P{st.priority}</span>
                           )}
                           <span>{st.title}</span>
                           {st.dedicated_hours != null && st.dedicated_hours > 0 && (
-                            <span className="metric text-[9px] text-slate-500">
+                            <span className="metric text-[9px] text-ink-soft dark:text-slate-500">
                               {st.dedicated_hours}h
                             </span>
                           )}

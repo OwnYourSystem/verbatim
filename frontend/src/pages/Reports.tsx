@@ -266,7 +266,7 @@ export function Reports() {
           <h1 className="text-3xl font-extrabold tracking-tight">
             <span className="text-gradient">Reports</span>
           </h1>
-          <p className="mt-1.5 text-sm text-slate-400">
+          <p className="mt-1.5 text-sm text-ink-soft dark:text-slate-400">
             How each system is moving — behind, on track, or done.
           </p>
         </div>
@@ -332,11 +332,11 @@ export function Reports() {
           >
             ☀️
           </span>
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-soft dark:text-slate-500">
             Morning briefing & notifications
           </h2>
         </div>
-        <p className="text-sm text-slate-400 mb-4">
+        <p className="text-sm text-ink-soft dark:text-slate-400 mb-4">
           Enable browser notifications, then preview today's briefing. (Scheduled server push is a
           deploy-time feature — see docs/NOTIFICATIONS.md.)
         </p>
@@ -348,7 +348,7 @@ export function Reports() {
             Show briefing now
           </button>
         </div>
-        {notifStatus && <p className="text-sm text-slate-400 mt-3">{notifStatus}</p>}
+        {notifStatus && <p className="text-sm text-ink-soft dark:text-slate-400 mt-3">{notifStatus}</p>}
       </div>
     </div>
   );

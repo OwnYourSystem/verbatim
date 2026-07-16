@@ -96,7 +96,7 @@ export function Systems() {
             Add
           </button>
         </div>
-        <p className="mt-2 text-[11px] text-slate-500">
+        <p className="mt-2 text-[11px] text-ink-soft dark:text-slate-500">
           Icon auto-suggests as you type — click it to change.
         </p>
       </Card>
@@ -147,12 +147,12 @@ export function Systems() {
                     onClick={() => setOpenId(openId === s.id ? null : s.id)}
                     className="font-semibold flex-1 text-left transition-colors hover:text-emerald-300 min-w-0 truncate"
                   >
-                    <span className="text-slate-500 mr-1.5">{openId === s.id ? "▾" : "▸"}</span>
+                    <span className="text-ink-soft dark:text-slate-500 mr-1.5">{openId === s.id ? "▾" : "▸"}</span>
                     {s.name}
                   </button>
                   <button
                     onClick={() => { setEditingNameId(s.id); setEditingNameValue(s.name); }}
-                    className="text-slate-500 hover:text-emerald-400 transition-colors text-sm shrink-0"
+                    className="text-ink-soft dark:text-slate-500 hover:text-emerald-400 transition-colors text-sm shrink-0"
                     title="Rename system"
                   >
                     ✎
@@ -162,7 +162,7 @@ export function Systems() {
             </div>
             {/* Row 2: controls — wraps naturally on mobile */}
             <div className="flex flex-wrap items-center gap-2 mt-2">
-              <label className="text-xs text-slate-400 shrink-0">monthly priority</label>
+              <label className="text-xs text-ink-soft dark:text-slate-400 shrink-0">monthly priority</label>
               <input
                 type="number"
                 min={1}
@@ -272,7 +272,7 @@ function TaskManager({ systemId, targetTaskId }: { systemId: number; targetTaskI
         <TaskRow key={t.id} task={t} onChange={load} highlight={t.id === targetTaskId} />
       ))}
       {tasks.length === 0 && (
-        <p className="text-xs text-slate-500">No tasks yet — add one above.</p>
+        <p className="text-xs text-ink-soft dark:text-slate-500">No tasks yet — add one above.</p>
       )}
     </div>
   );
@@ -300,12 +300,12 @@ function TaskRow({ task, onChange, highlight = false }: { task: Task; onChange: 
   return (
     <div
       ref={rowRef}
-      className={`rounded-xl border bg-slate-900/30 transition-all duration-700 ${
-        highlight ? "border-emerald-500/60 shadow-[0_0_12px_rgba(52,211,153,0.15)]" : "border-slate-800"
+      className={`rounded-xl border bg-ink/5 dark:bg-slate-900/30 transition-all duration-700 ${
+        highlight ? "border-emerald-500/60 shadow-[0_0_12px_rgba(52,211,153,0.15)]" : "border-ink/10 dark:border-slate-800"
       }`}
     >
       <div className="flex items-center gap-2 text-sm px-2.5 py-2">
-        <button onClick={() => setOpen(!open)} className="text-slate-500">
+        <button onClick={() => setOpen(!open)} className="text-ink-soft dark:text-slate-500">
           {open ? "▾" : "▸"}
         </button>
         <PriorityBadge priority={task.priority} />
@@ -315,7 +315,7 @@ function TaskRow({ task, onChange, highlight = false }: { task: Task; onChange: 
           {task.required_demo && <span title="Demo required" className="ml-1">🎬</span>}
         </button>
         {task.last_checkpoint && (
-          <span className="text-[10px] text-slate-400 px-1.5 py-0.5 rounded bg-slate-800">
+          <span className="text-[10px] text-ink-soft dark:text-slate-400 px-1.5 py-0.5 rounded bg-paper dark:bg-slate-800">
             {task.last_checkpoint}
           </span>
         )}
@@ -360,8 +360,8 @@ function SubtaskManager({ taskId }: { taskId: number }) {
   };
 
   return (
-    <div className="pl-3 border-l border-slate-800 space-y-2">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+    <div className="pl-3 border-l border-ink/10 dark:border-slate-800 space-y-2">
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft dark:text-slate-500">
         Subtasks
       </div>
       {subs.map((st) => (
@@ -396,16 +396,16 @@ function SubtaskRow({ sub, onChange }: { sub: Subtask; onChange: () => void }) {
   };
 
   return (
-    <div className="rounded-lg border border-slate-800/70">
+    <div className="rounded-lg border border-ink/10 dark:border-slate-800/70">
       <div className="flex items-center gap-2 text-sm px-2 py-1.5">
-        <button onClick={() => setOpen(!open)} className="text-slate-500">
+        <button onClick={() => setOpen(!open)} className="text-ink-soft dark:text-slate-500">
           {open ? "▾" : "▸"}
         </button>
         <PriorityBadge priority={sub.priority} />
         <button onClick={() => setOpen(!open)} className="flex-1 text-left">
           {sub.title}
         </button>
-        <span className="text-[10px] text-slate-500">
+        <span className="text-[10px] text-ink-soft dark:text-slate-500">
           inh. {sub.inherited_priority ?? "—"}
         </span>
         <StatusBadge status={sub.status} />

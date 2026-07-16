@@ -6,7 +6,7 @@ import { MeCard, MeSectionTitle } from "../components/me/Card";
 import { ProgressRing } from "../components/me/ProgressRing";
 import { PrimaryButton } from "../components/me/PrimaryButton";
 import { DraggableList } from "../components/me/DraggableList";
-import { ME_INK, ME_INK_SOFT, pastelFor } from "../components/me/tokens";
+import { ME_BORDER, ME_CHIP_BG, ME_INK, ME_INK_SOFT, ME_INPUT_BG, pastelFor } from "../components/me/tokens";
 
 /** URL that deep-links to a specific task inside the Systems page. */
 function taskLink(t: Task) {
@@ -17,7 +17,7 @@ function Chip({ children, tone }: { children: React.ReactNode; tone?: "crit" }) 
   return (
     <span
       className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
-      style={{ background: "rgba(255,255,255,0.55)", color: tone === "crit" ? "#B4351A" : "inherit" }}
+      style={{ background: ME_CHIP_BG, color: tone === "crit" ? "#B4351A" : "inherit" }}
     >
       {children}
     </span>
@@ -240,7 +240,7 @@ export function Dashboard() {
         </p>
         <textarea
           className="w-full rounded-2xl px-3 py-2 text-sm resize-none"
-          style={{ background: "rgba(60,50,40,0.04)", color: ME_INK, border: "1px solid rgba(60,50,40,0.08)" }}
+          style={{ background: ME_INPUT_BG, color: ME_INK, border: `1px solid ${ME_BORDER}` }}
           rows={2}
           placeholder="What got done today?"
           value={notes}

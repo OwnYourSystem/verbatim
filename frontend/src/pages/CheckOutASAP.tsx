@@ -73,7 +73,7 @@ export function CheckOutASAP() {
       {error && <p className="text-amber-400 text-sm">{error}</p>}
 
       {/* Add form */}
-      <form onSubmit={add} className="space-y-3 p-4 rounded-xl border border-slate-700/60 bg-slate-900/60">
+      <form onSubmit={add} className="space-y-3 p-4 rounded-xl border border-ink/10 dark:border-slate-700/60 bg-ink/10 dark:bg-slate-900/60">
         <div className="flex flex-col sm:flex-row gap-3">
           <input
             required
@@ -103,18 +103,18 @@ export function CheckOutASAP() {
 
       {/* Active items */}
       {active.length === 0 ? (
-        <p className="text-slate-500 text-sm italic">Nothing queued — add something above.</p>
+        <p className="text-ink-soft dark:text-slate-500 text-sm italic">Nothing queued — add something above.</p>
       ) : (
         <ul className="space-y-2">
           {active.map((item) => (
             <li
               key={item.id}
-              className="flex items-start gap-3 p-3 rounded-xl border border-slate-700/50 bg-slate-900/50 group"
+              className="flex items-start gap-3 p-3 rounded-xl border border-ink/10 dark:border-slate-700/50 bg-ink/10 dark:bg-slate-900/50 group"
             >
               <button
                 onClick={() => check(item.id)}
                 title="Mark as done"
-                className="mt-0.5 shrink-0 w-5 h-5 rounded-full border-2 border-slate-600 hover:border-emerald-400 transition-colors flex items-center justify-center"
+                className="mt-0.5 shrink-0 w-5 h-5 rounded-full border-2 border-ink/15 dark:border-slate-600 hover:border-emerald-400 transition-colors flex items-center justify-center"
               >
                 <span className="text-emerald-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity">✓</span>
               </button>
@@ -137,19 +137,19 @@ export function CheckOutASAP() {
                       href={item.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[10px] text-slate-500 hover:text-emerald-400 transition-colors truncate max-w-xs"
+                      className="text-[10px] text-ink-soft dark:text-slate-500 hover:text-emerald-400 transition-colors truncate max-w-xs"
                     >
                       {shorten(item.url)}
                     </a>
                   )}
                 </div>
                 {item.description && (
-                  <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{item.description}</p>
+                  <p className="text-xs text-ink-soft dark:text-slate-400 mt-0.5 line-clamp-2">{item.description}</p>
                 )}
               </div>
               <button
                 onClick={() => del(item.id)}
-                className="shrink-0 text-[10px] text-slate-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                className="shrink-0 text-[10px] text-ink-soft/70 dark:text-slate-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
               >
                 ✕
               </button>
@@ -163,7 +163,7 @@ export function CheckOutASAP() {
         <div>
           <button
             onClick={() => setShowArchive((v) => !v)}
-            className="text-xs text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1"
+            className="text-xs text-ink-soft dark:text-slate-500 hover:text-ink dark:hover:text-slate-300 transition-colors flex items-center gap-1"
           >
             <span>{showArchive ? "▾" : "▸"}</span>
             Archive ({archived.length} item{archived.length !== 1 ? "s" : ""})
@@ -173,22 +173,22 @@ export function CheckOutASAP() {
             <div className="mt-3 space-y-4">
               {groups.map(([month, items]) => (
                 <div key={month}>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">{month}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft/70 dark:text-slate-600 mb-2">{month}</p>
                   <ul className="space-y-1">
                     {items.map((item) => (
-                      <li key={item.id} className="flex items-center gap-2 text-xs text-slate-500 group">
+                      <li key={item.id} className="flex items-center gap-2 text-xs text-ink-soft dark:text-slate-500 group">
                         <span className="text-emerald-700 shrink-0">✓</span>
                         {item.url ? (
-                          <a href={item.url} target="_blank" rel="noopener noreferrer" className="flex-1 hover:text-slate-300 transition-colors line-through decoration-slate-600">
+                          <a href={item.url} target="_blank" rel="noopener noreferrer" className="flex-1 hover:text-ink dark:hover:text-slate-300 transition-colors line-through decoration-slate-600">
                             {item.title}
                           </a>
                         ) : (
                           <span className="flex-1 line-through decoration-slate-600">{item.title}</span>
                         )}
-                        <span className="text-slate-700 shrink-0">
+                        <span className="text-ink-soft/60 dark:text-slate-700 shrink-0">
                           {item.checked_at ? new Date(item.checked_at).toLocaleDateString() : ""}
                         </span>
-                        <button onClick={() => del(item.id)} className="text-slate-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">✕</button>
+                        <button onClick={() => del(item.id)} className="text-ink-soft/60 dark:text-slate-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">✕</button>
                       </li>
                     ))}
                   </ul>

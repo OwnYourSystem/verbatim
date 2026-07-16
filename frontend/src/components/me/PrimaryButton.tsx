@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ME_ACCENT, ME_ACCENT_DARK, ME_INK } from "./tokens";
+import { ME_ACCENT, ME_ACCENT_DARK, ME_GHOST_BG, ME_INK } from "./tokens";
 
 export function PrimaryButton({
   children,
@@ -50,7 +50,7 @@ export function GhostButton({
       disabled={disabled}
       className={`inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold
         transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none ${className}`}
-      style={{ background: "rgba(60,50,40,0.06)", color: ME_INK }}
+      style={{ background: ME_GHOST_BG, color: ME_INK }}
     >
       {children}
     </button>

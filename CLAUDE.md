@@ -18,7 +18,7 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 **Both frontend and backend now auto-deploy on push to `main`.** No manual deploy steps needed going forward.
 
-**Do next:** (1) Smoke-test the full Product Dev flow: Wall of Pains → create project → Product Dev → sprints + stories. (2) Merge `feature/me-style-today-redesign` (ME-style pastel redesign of the shell + Today page — see 2026-07-16 entry below) and deploy. (3) Migrate remaining pages to the ME style. (4) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
+**Do next:** (1) Merge `feature/theme-toggle` (full light/dark toggle across the whole app — see 2026-07-16 entry below) and deploy. (2) Build the Timer/Focus feature (pick a Specific Knowledge → find its tasks → countdown → Achievements on Today). (3) Refine SK Universe's core "sun" visual (NASA Eyes-style). (4) Smoke-test the full Product Dev flow: Wall of Pains → create project → Product Dev → sprints + stories. (5) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
 
 **Live agent is ON:** `backend/.env` has a real (rotated) key, so `get_llm()`/`get_intake()` use real Claude when the backend runs. Not yet smoke-tested live (needs backend running against local Postgres). Tests stay offline via `tests/conftest.py`.
 
@@ -90,6 +90,19 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
 ---
 
 ## Action log
+
+### 2026-07-16 — Full light/dark theme toggle (whole app, not just Today)
+
+Owner feedback on the ME-style pass 1: mixing dark "Cosmos" pages with a light Today page reads as broken, not transitional — asked for a real either/or toggle across the whole app. Built on branch `feature/theme-toggle` (from `main`, after merging the shell+Today PR).
+
+- **`frontend/src/theme.tsx`** — `ThemeProvider`/`useTheme()`, `light`/`dark` state, persisted to `localStorage` (`ma_theme`), toggles a `.dark` class on `<html>`. Defaults to **light** (new direction) unless a stored preference says otherwise. `index.html` gets a tiny inline pre-React script that applies the stored class before first paint, to avoid a flash of the wrong theme.
+- **`index.css`** — every Cosmos/ME CSS custom property (`--color-void/space/deep/hull`, `--glass-bg/border`, `--glow-*`, and a new `--me-*` set: bg/surface/ink/border/shadow/overlay/input/chip/ghost + 6 pastel bg/text pairs) now has a **light value under `:root`** and a **dark override under `html.dark`**. Signal colors (ok/warn/crit/idle) and the ME accent (coral) stay constant across themes — they're accent colors, not surfaces. `body`, `.btn-*`, `.input-base`, `.glass-panel`, `.cosmos-btn-*`, `.skeleton-bone` all made theme-reactive.
+- **`tailwind.config.js`** — `darkMode: "selector"` (keys off the `.dark` class) + new `cream`/`paper`/`ink`/`ink-soft` color tokens for the legacy pages' light equivalents.
+- **`components/me/tokens.ts`** — every `ME_*` constant changed from a literal hex to a `var(--me-*)` string, so every ME component (Card, PrimaryButton, ProgressRing, DateHeader, BottomNavBar, Dashboard) follows the active theme automatically with zero component-level branching. Fixed a few spots that still had literal hex/rgba (Card's default bg, ProgressRing's track color, Dashboard's Chip/textarea) to route through the same vars.
+- **`App.tsx`** — dropped the pass-1 "Today gets cream, everything else stays dark" special case; the whole shell is now `bg-cream dark:bg-slate-900` uniformly. SK Universe stays exempt from the page chrome/theme (its own immersive starfield, like a map view that ignores the host app's theme).
+- **Mechanical `dark:` migration across 13 legacy files** (`ui.tsx`, `WorkItemEditor.tsx`, `Charts.tsx`, `SystemIcon.tsx`, `Systems.tsx`, `Calendar.tsx`, `Reports.tsx`, `Proposals.tsx`, `Intake.tsx`, `KnowledgePool.tsx`, `CheckOutASAP.tsx`, `WallOfPains.tsx`, `ProductDev.tsx`) — wrote a script (`docs/`-adjacent scratch, not committed) that prefixes every existing `bg/text/border/placeholder/hover:*-slate-NNN` Tailwind class with `dark:` and inserts a light equivalent (`cream`/`paper`/`ink`/`ink-soft` family) alongside it, 218 substitutions total. First attempt had a regex bug (bare tokens matching inside already-`hover:`-prefixed classes, corrupting ~15 lines) — caught by review before committing, fixed by excluding `:` from the "preceding character" boundary check, re-ran clean. Verified zero un-migrated tokens left behind with a separate checker script.
+- **Toggle UI**: a switch in the `BottomNavBar` "More" sheet (🌙/☀️ label + animated pill), since that's reachable from every page.
+- **Verified live**: ran backend+frontend locally, screenshotted Today/Systems/Reports/WallOfPains/ProductDev in both themes, toggled via the More sheet, confirmed SK Universe stays an untouched dark starfield regardless of theme, zero console errors on all 10 non-SK-Universe routes (the only console errors seen were Google Fonts requests failing due to this sandbox's network policy, unrelated to the app). **Also verified: 53 backend tests pass (untouched), tsc clean, vite build OK.**
 
 ### 2026-07-16 — "ME style app" redesign, pass 1: shell + Today page
 

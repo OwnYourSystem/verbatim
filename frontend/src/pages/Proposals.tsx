@@ -107,11 +107,11 @@ export function Proposals() {
             <span className="font-bold">
               {systems[p.system_id]?.name ?? `System #${p.system_id}`}
             </span>
-            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-400 border border-slate-600/60">
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-ink/10 dark:bg-slate-700/60 text-ink-soft dark:text-slate-400 border border-ink/15 dark:border-slate-600/60">
               {p.trigger}
             </span>
           </div>
-          <p className="text-sm text-slate-300">{p.summary}</p>
+          <p className="text-sm text-ink/80 dark:text-slate-300">{p.summary}</p>
 
           {p.actions.length > 0 ? (
             <ul className="mt-4 space-y-1.5 text-sm">
@@ -137,7 +137,7 @@ export function Proposals() {
               })}
             </ul>
           ) : (
-            <p className="mt-3 text-sm text-slate-500">No actionable changes proposed.</p>
+            <p className="mt-3 text-sm text-ink-soft dark:text-slate-500">No actionable changes proposed.</p>
           )}
 
           <div className="mt-5 flex gap-2">

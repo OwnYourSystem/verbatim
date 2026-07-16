@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
-import { ME_INK, ME_TEAL } from "./tokens";
+import { ME_BORDER, ME_INK, ME_TEAL } from "./tokens";
 
 export function ProgressRing({
   value,
   size = 64,
   strokeWidth = 7,
   color = ME_TEAL,
-  trackColor = "rgba(60,50,40,0.08)",
+  trackColor = ME_BORDER,
   label,
 }: {
   value: number;

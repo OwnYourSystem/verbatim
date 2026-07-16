@@ -5,11 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
     <!-- PWA / theme -->
-    <meta name="theme-color" content="#0f172a" />
+    <meta name="theme-color" content="#FBF8F3" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="MindAnchor" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <script>
+      // Applied before paint so the correct theme is active from the first frame
+      // (React sets this too, but only after mount — this avoids a flash).
+      try {
+        if (localStorage.getItem("ma_theme") === "dark") {
+          document.documentElement.classList.add("dark");
+        }
+      } catch {
+        /* localStorage unavailable (private mode etc.) — default light theme applies */
+      }
+    </script>
 
     <!-- SEO -->
     <meta name="description" content="Your external brain — AI project manager, scrum master &amp; calendar." />

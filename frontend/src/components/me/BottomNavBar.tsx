@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { clearToken } from "../../api";
-import { ME_ACCENT, ME_BG, ME_BORDER, ME_INK, ME_INK_SOFT } from "./tokens";
+import { useTheme } from "../../theme";
+import { ME_ACCENT, ME_BG, ME_BORDER, ME_GHOST_BG, ME_INK, ME_INK_SOFT, ME_OVERLAY, ME_SURFACE, ME_SURFACE_SOFT } from "./tokens";
 
 /** Thumb-reachable primary tabs. MindAnchor has 11 destinations — more than a
  *  bottom bar can hold — so the 3 most-used stay pinned and the rest live in
@@ -30,7 +31,7 @@ function TabButton({ to, end, label, icon }: { to: string; end?: boolean; label:
       end={end}
       className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-w-[60px] rounded-2xl transition-all duration-200"
       style={({ isActive }) => ({
-        background: isActive ? "rgba(255,137,100,0.14)" : "transparent",
+        background: isActive ? "var(--me-accent-tint)" : "transparent",
         color: isActive ? ME_ACCENT : ME_INK_SOFT,
       })}
     >
@@ -39,6 +40,30 @@ function TabButton({ to, end, label, icon }: { to: string; end?: boolean; label:
       </span>
       <span className="text-[10px] font-bold">{label}</span>
     </NavLink>
+  );
+}
+
+function ThemeToggle() {
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
+  return (
+    <button
+      onClick={toggleTheme}
+      className="w-full flex items-center justify-between gap-3 rounded-2xl px-4 py-3 mt-2"
+      style={{ background: ME_GHOST_BG, color: ME_INK }}
+    >
+      <span className="text-sm font-semibold">{isDark ? "🌙 Dark mode" : "☀️ Light mode"}</span>
+      <span
+        className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200"
+        style={{ background: isDark ? ME_ACCENT : "rgba(60,50,40,0.18)" }}
+        aria-hidden
+      >
+        <span
+          className="inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
+          style={{ transform: isDark ? "translateX(22px)" : "translateX(2px)" }}
+        />
+      </span>
+    </button>
   );
 }
 
@@ -58,13 +83,13 @@ export function BottomNavBar() {
     <>
       {moreOpen && (
         <div className="fixed inset-0 z-30 flex items-end justify-center" onClick={() => setMoreOpen(false)}>
-          <div className="absolute inset-0" style={{ background: "rgba(59,58,69,0.35)" }} />
+          <div className="absolute inset-0" style={{ background: ME_OVERLAY }} />
           <div
             className="relative w-full max-w-lg rounded-t-3xl p-4 pb-[max(env(safe-area-inset-bottom),1rem)]"
-            style={{ background: "#FFFFFF", boxShadow: "0 -20px 60px rgba(60,50,40,0.25)" }}
+            style={{ background: ME_SURFACE, boxShadow: "0 -20px 60px rgba(60,50,40,0.25)" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="h-1 w-10 rounded-full mx-auto mb-4" style={{ background: "rgba(60,50,40,0.15)" }} />
+            <div className="h-1 w-10 rounded-full mx-auto mb-4" style={{ background: ME_BORDER }} />
             <div className="grid grid-cols-4 gap-2">
               {MORE.map((n) => (
                 <NavLink
@@ -81,9 +106,10 @@ export function BottomNavBar() {
                 </NavLink>
               ))}
             </div>
+            <ThemeToggle />
             <button
               onClick={handleSignOut}
-              className="w-full mt-4 text-center text-xs font-medium py-2"
+              className="w-full mt-2 text-center text-xs font-medium py-2"
               style={{ color: ME_INK_SOFT }}
             >
               Sign out
@@ -93,7 +119,7 @@ export function BottomNavBar() {
       )}
       <nav
         className="fixed bottom-0 inset-x-0 z-20 px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2"
-        style={{ background: "rgba(251,248,243,0.94)", backdropFilter: "blur(12px)", borderTop: `1px solid ${ME_BORDER}` }}
+        style={{ background: ME_SURFACE_SOFT, backdropFilter: "blur(12px)", borderTop: `1px solid ${ME_BORDER}` }}
       >
         <div className="max-w-lg mx-auto flex items-stretch gap-1">
           {PRIMARY.map((n) => (

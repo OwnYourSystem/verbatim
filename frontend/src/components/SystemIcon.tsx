@@ -65,7 +65,7 @@ export function IconPicker({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="text-2xl leading-none rounded-xl px-2 py-1.5 transition-colors hover:bg-slate-800 active:scale-95"
+        className="text-2xl leading-none rounded-xl px-2 py-1.5 transition-colors hover:bg-ink/10 dark:hover:bg-slate-800 active:scale-95"
         title="Change icon"
       >
         {value}
@@ -92,8 +92,8 @@ export function IconPicker({
                 key={emoji}
                 type="button"
                 onClick={() => { onChange(emoji); setOpen(false); }}
-                className={`text-xl leading-none rounded-lg p-1.5 transition-colors hover:bg-slate-700 ${
-                  value === emoji ? "bg-slate-700 ring-1 ring-emerald-500/60" : ""
+                className={`text-xl leading-none rounded-lg p-1.5 transition-colors hover:bg-ink/15 dark:hover:bg-slate-700 ${
+                  value === emoji ? "bg-ink/10 dark:bg-slate-700 ring-1 ring-emerald-500/60" : ""
                 }`}
                 title={emoji}
               >

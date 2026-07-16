@@ -118,10 +118,10 @@ function ProjectPanel({
   const currentPhaseIdx = PHASES.findIndex((p) => p.key === phase);
 
   return (
-    <div className="border-t border-slate-700/60 pt-4 mt-4 space-y-4">
+    <div className="border-t border-ink/10 dark:border-slate-700/60 pt-4 mt-4 space-y-4">
       {/* AI Assist */}
       <div className="flex items-center justify-between">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-ink-soft dark:text-slate-500">
           Project Definition
         </p>
         <button
@@ -140,7 +140,7 @@ function ProjectPanel({
 
       {/* Name */}
       <div>
-        <label className="text-[10px] text-slate-400 uppercase tracking-wider">
+        <label className="text-[10px] text-ink-soft dark:text-slate-400 uppercase tracking-wider">
           Project / Product Name
         </label>
         <input
@@ -153,7 +153,7 @@ function ProjectPanel({
 
       {/* Problem statement */}
       <div>
-        <label className="text-[10px] text-slate-400 uppercase tracking-wider">
+        <label className="text-[10px] text-ink-soft dark:text-slate-400 uppercase tracking-wider">
           Problem Statement
         </label>
         <textarea
@@ -167,7 +167,7 @@ function ProjectPanel({
 
       {/* Target audience */}
       <div>
-        <label className="text-[10px] text-slate-400 uppercase tracking-wider">
+        <label className="text-[10px] text-ink-soft dark:text-slate-400 uppercase tracking-wider">
           Target Audience / Buyer
         </label>
         <input
@@ -180,7 +180,7 @@ function ProjectPanel({
 
       {/* Monetization model */}
       <div>
-        <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-2 block">
+        <label className="text-[10px] text-ink-soft dark:text-slate-400 uppercase tracking-wider mb-2 block">
           Monetization Model
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -200,7 +200,7 @@ function ProjectPanel({
               >
                 <span className="text-base mr-1">{meta.icon}</span>
                 <span className="font-semibold">{meta.label}</span>
-                <p className="text-[9px] text-slate-500 mt-0.5 leading-tight">{meta.desc}</p>
+                <p className="text-[9px] text-ink-soft dark:text-slate-500 mt-0.5 leading-tight">{meta.desc}</p>
               </button>
             );
           })}
@@ -209,7 +209,7 @@ function ProjectPanel({
 
       {/* Phase stepper */}
       <div>
-        <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-2 block">
+        <label className="text-[10px] text-ink-soft dark:text-slate-400 uppercase tracking-wider mb-2 block">
           Phase
         </label>
         <div className="flex gap-1">
@@ -283,7 +283,7 @@ function PainCard({
 
   return (
     <div
-      className="rounded-xl border bg-slate-900/70 overflow-hidden flex flex-col"
+      className="rounded-xl border bg-ink/10 dark:bg-slate-900/70 overflow-hidden flex flex-col"
       style={{ borderColor: `${area.color}28` }}
     >
       {/* Coloured top bar */}
@@ -300,7 +300,7 @@ function PainCard({
               {area.label}
             </span>
             {pain.source_platform && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700/60">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-paper dark:bg-slate-800 text-ink-soft dark:text-slate-400 border border-ink/10 dark:border-slate-700/60">
                 {pain.source_platform}
               </span>
             )}
@@ -312,7 +312,7 @@ function PainCard({
           </div>
           <button
             onClick={onDelete}
-            className="text-slate-600 hover:text-red-400 transition-colors text-sm shrink-0"
+            className="text-ink-soft/70 dark:text-slate-600 hover:text-red-400 transition-colors text-sm shrink-0"
             title="Remove pain"
           >
             ✕
@@ -320,11 +320,11 @@ function PainCard({
         </div>
 
         {/* Title */}
-        <h3 className="font-semibold text-sm text-slate-100 leading-snug mb-2">{pain.title}</h3>
+        <h3 className="font-semibold text-sm text-ink dark:text-slate-100 leading-snug mb-2">{pain.title}</h3>
 
         {/* Description */}
         {pain.description && (
-          <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-3 mb-3">
+          <p className="text-[11px] text-ink-soft dark:text-slate-400 leading-relaxed line-clamp-3 mb-3">
             {pain.description}
           </p>
         )}
@@ -335,7 +335,7 @@ function PainCard({
             href={pain.source_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[10px] text-slate-500 hover:text-emerald-400 transition-colors mb-3 flex items-center gap-1"
+            className="text-[10px] text-ink-soft dark:text-slate-500 hover:text-emerald-400 transition-colors mb-3 flex items-center gap-1"
           >
             ↗ {shorten(pain.source_url)}
           </a>
@@ -344,12 +344,12 @@ function PainCard({
         {/* Project summary (if exists, collapsed) */}
         {proj && !expanded && (
           <div
-            className="rounded-lg border p-2.5 mb-3 cursor-pointer hover:border-slate-600 transition-all"
+            className="rounded-lg border p-2.5 mb-3 cursor-pointer hover:border-ink/25 dark:hover:border-slate-600 transition-all"
             style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }}
             onClick={() => setExpanded(true)}
           >
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-semibold text-slate-200">{proj.name}</span>
+              <span className="text-xs font-semibold text-ink dark:text-slate-200">{proj.name}</span>
               {mono && (
                 <span
                   className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
@@ -393,7 +393,7 @@ function PainCard({
           {!expanded ? (
             <button
               onClick={() => setExpanded(true)}
-              className="w-full py-2 rounded-lg border border-dashed text-[11px] text-slate-500 hover:text-slate-300 hover:border-slate-500 transition-all"
+              className="w-full py-2 rounded-lg border border-dashed text-[11px] text-ink-soft dark:text-slate-500 hover:text-ink dark:hover:text-slate-300 hover:border-ink/30 dark:hover:border-slate-500 transition-all"
               style={{ borderColor: "rgba(255,255,255,0.1)" }}
             >
               {proj ? "Edit Project →" : "Define Project →"}
@@ -403,7 +403,7 @@ function PainCard({
               <ProjectPanel pain={pain} onUpdated={(p) => { onUpdated(p); setExpanded(false); }} />
               <button
                 onClick={() => setExpanded(false)}
-                className="mt-3 text-[10px] text-slate-600 hover:text-slate-400 transition-colors"
+                className="mt-3 text-[10px] text-ink-soft/70 dark:text-slate-600 hover:text-ink dark:hover:text-slate-400 transition-colors"
               >
                 Collapse ▲
               </button>
@@ -435,7 +435,7 @@ function DiscoveryPreview({
           return (
             <div
               key={i}
-              className="flex items-start gap-3 p-3 rounded-lg border bg-slate-900/60 border-slate-700/50"
+              className="flex items-start gap-3 p-3 rounded-lg border bg-ink/10 dark:bg-slate-900/60 border-ink/10 dark:border-slate-700/50"
             >
               <div className="flex-1 min-w-0">
                 <div className="flex gap-2 mb-1 flex-wrap">
@@ -446,17 +446,17 @@ function DiscoveryPreview({
                     {area.label}
                   </span>
                   {item.source_platform && (
-                    <span className="text-[10px] text-slate-500">{item.source_platform}</span>
+                    <span className="text-[10px] text-ink-soft dark:text-slate-500">{item.source_platform}</span>
                   )}
                 </div>
-                <p className="text-xs font-semibold text-slate-200">{item.title}</p>
-                <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-2">{item.description}</p>
+                <p className="text-xs font-semibold text-ink dark:text-slate-200">{item.title}</p>
+                <p className="text-[10px] text-ink-soft dark:text-slate-400 mt-0.5 line-clamp-2">{item.description}</p>
                 {item.source_url && (
                   <a
                     href={item.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[9px] text-slate-600 hover:text-emerald-400 transition-colors"
+                    className="text-[9px] text-ink-soft/70 dark:text-slate-600 hover:text-emerald-400 transition-colors"
                   >
                     ↗ {shorten(item.source_url)}
                   </a>
@@ -587,7 +587,7 @@ export function WallOfPains() {
         <div className="ml-auto flex gap-2">
           <button
             onClick={() => setShowAddForm((v) => !v)}
-            className="text-xs px-3 py-1.5 rounded-full border border-slate-600 text-slate-400 hover:border-slate-400 hover:text-slate-200 transition-all"
+            className="text-xs px-3 py-1.5 rounded-full border border-ink/15 dark:border-slate-600 text-ink-soft dark:text-slate-400 hover:border-ink/30 dark:hover:border-slate-400 hover:text-ink dark:hover:text-slate-200 transition-all"
           >
             + Add Pain
           </button>
@@ -612,7 +612,7 @@ export function WallOfPains() {
       {showAddForm && (
         <form
           onSubmit={addManual}
-          className="p-4 rounded-xl border border-slate-700/60 bg-slate-900/60 space-y-3"
+          className="p-4 rounded-xl border border-ink/10 dark:border-slate-700/60 bg-ink/10 dark:bg-slate-900/60 space-y-3"
         >
           <div className="flex flex-wrap gap-3">
             <input
@@ -658,7 +658,7 @@ export function WallOfPains() {
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="text-sm text-slate-500 hover:text-slate-300"
+              className="text-sm text-ink-soft dark:text-slate-500 hover:text-ink dark:hover:text-slate-300"
             >
               Cancel
             </button>
@@ -675,8 +675,8 @@ export function WallOfPains() {
       {filtered.length === 0 ? (
         <div className="text-center py-16 space-y-4">
           <p className="text-4xl">🩹</p>
-          <p className="text-slate-400 font-medium">No pains on the wall yet</p>
-          <p className="text-slate-600 text-sm">
+          <p className="text-ink-soft dark:text-slate-400 font-medium">No pains on the wall yet</p>
+          <p className="text-ink-soft/70 dark:text-slate-600 text-sm">
             Click <strong className="text-violet-300">✦ Discover Pains</strong> to have AI scan current problems,
             or add your own.
           </p>

@@ -58,13 +58,13 @@ function StoryCard({
   const next = nextStatus[story.status as StoryStatus];
 
   return (
-    <div className="group bg-slate-800/60 border border-slate-700/60 rounded-xl p-3 hover:border-slate-600 transition-all">
+    <div className="group bg-paper dark:bg-slate-800/60 border border-ink/10 dark:border-slate-700/60 rounded-xl p-3 hover:border-ink/25 dark:hover:border-slate-600 transition-all">
       <div className="flex items-start gap-2 mb-2">
         <span title={tm.label} className="mt-0.5 shrink-0 text-base">{tm.icon}</span>
-        <span className="text-sm text-slate-200 leading-snug flex-1">{story.title}</span>
+        <span className="text-sm text-ink dark:text-slate-200 leading-snug flex-1">{story.title}</span>
         <button
           onClick={() => onDelete(story.id)}
-          className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 text-xs px-1 transition-opacity"
+          className="opacity-0 group-hover:opacity-100 text-ink-soft/70 dark:text-slate-600 hover:text-red-400 text-xs px-1 transition-opacity"
         >
           ✕
         </button>
@@ -75,7 +75,7 @@ function StoryCard({
         <select
           value={story.points ?? ""}
           onChange={(e) => onUpdate(story.id, { points: e.target.value ? Number(e.target.value) : null })}
-          className="text-xs bg-slate-700/60 border border-slate-600/40 rounded px-1.5 py-0.5 text-slate-300"
+          className="text-xs bg-ink/10 dark:bg-slate-700/60 border border-ink/10 dark:border-slate-600/40 rounded px-1.5 py-0.5 text-ink/80 dark:text-slate-300"
         >
           <option value="">pts</option>
           {FIBONACCI.map(f => <option key={f} value={f}>{f}</option>)}
@@ -85,7 +85,7 @@ function StoryCard({
         <select
           value={story.priority}
           onChange={(e) => onUpdate(story.id, { priority: Number(e.target.value) })}
-          className="text-xs bg-slate-700/60 border border-slate-600/40 rounded px-1.5 py-0.5 text-slate-300"
+          className="text-xs bg-ink/10 dark:bg-slate-700/60 border border-ink/10 dark:border-slate-600/40 rounded px-1.5 py-0.5 text-ink/80 dark:text-slate-300"
         >
           {[1, 2, 3, 4, 5].map(p => (
             <option key={p} value={p}>P{p}</option>
@@ -106,7 +106,7 @@ function StoryCard({
         {next && (
           <button
             onClick={() => onUpdate(story.id, { status: next })}
-            className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded px-2 py-0.5 transition-colors"
+            className="text-xs bg-ink/10 dark:bg-slate-700 hover:bg-ink/15 dark:hover:bg-slate-600 text-ink/80 dark:text-slate-300 rounded px-2 py-0.5 transition-colors"
           >
             → {next === "doing" ? "Start" : next === "review" ? "Review" : "Done"}
           </button>
@@ -116,7 +116,7 @@ function StoryCard({
         {story.status !== "backlog" && story.status !== "done" && (
           <button
             onClick={() => onUpdate(story.id, { sprint_id: null, status: "backlog" })}
-            className="text-xs text-slate-600 hover:text-slate-400 transition-colors ml-auto"
+            className="text-xs text-ink-soft/70 dark:text-slate-600 hover:text-ink dark:hover:text-slate-400 transition-colors ml-auto"
           >
             ↩ backlog
           </button>
@@ -147,7 +147,7 @@ function AddStoryForm({ onAdd }: { onAdd: (title: string, type: StoryType) => Pr
       <select
         value={type}
         onChange={e => setType(e.target.value as StoryType)}
-        className="text-xs bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-300"
+        className="text-xs bg-paper dark:bg-slate-800 border border-ink/10 dark:border-slate-700 rounded-lg px-2 py-1.5 text-ink/80 dark:text-slate-300"
       >
         {(Object.keys(STORY_TYPE_META) as StoryType[]).map(t => (
           <option key={t} value={t}>{STORY_TYPE_META[t].icon} {STORY_TYPE_META[t].label}</option>
@@ -157,7 +157,7 @@ function AddStoryForm({ onAdd }: { onAdd: (title: string, type: StoryType) => Pr
         value={title}
         onChange={e => setTitle(e.target.value)}
         placeholder="Add story, task, or bug…"
-        className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500/60"
+        className="flex-1 bg-paper dark:bg-slate-800 border border-ink/10 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm text-ink dark:text-slate-100 placeholder-ink-soft/70 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500/60"
       />
       <button
         type="submit"
@@ -192,19 +192,19 @@ function SprintPanel({
   const doneInSprint = sprintStories.filter(s => s.status === "done").length;
 
   return (
-    <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-4">
+    <div className="bg-paper dark:bg-slate-800/40 border border-ink/10 dark:border-slate-700/60 rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-slate-200">Sprints</h3>
+        <h3 className="text-sm font-semibold text-ink dark:text-slate-200">Sprints</h3>
         <button
           onClick={onCreateSprint}
-          className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg px-3 py-1 transition-colors"
+          className="text-xs bg-ink/10 dark:bg-slate-700 hover:bg-ink/15 dark:hover:bg-slate-600 text-ink/80 dark:text-slate-300 rounded-lg px-3 py-1 transition-colors"
         >
           + New Sprint
         </button>
       </div>
 
       {sprints.length === 0 && (
-        <p className="text-xs text-slate-500 italic">No sprints yet — create one to start planning.</p>
+        <p className="text-xs text-ink-soft dark:text-slate-500 italic">No sprints yet — create one to start planning.</p>
       )}
 
       <div className="space-y-2">
@@ -214,12 +214,12 @@ function SprintPanel({
             className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all ${
               sp.status === "active"
                 ? "border-blue-500/40 bg-blue-500/10"
-                : "border-slate-700/40 bg-slate-800/30"
+                : "border-ink/10 dark:border-slate-700/40 bg-paper/80 dark:bg-slate-800/30"
             }`}
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-200">Sprint {sp.number}</span>
+                <span className="text-xs font-semibold text-ink dark:text-slate-200">Sprint {sp.number}</span>
                 <span
                   className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
                   style={{
@@ -230,9 +230,9 @@ function SprintPanel({
                   {sp.status}
                 </span>
               </div>
-              {sp.goal && <p className="text-xs text-slate-400 truncate mt-0.5">{sp.goal}</p>}
+              {sp.goal && <p className="text-xs text-ink-soft dark:text-slate-400 truncate mt-0.5">{sp.goal}</p>}
             </div>
-            <div className="text-xs text-slate-500 shrink-0">
+            <div className="text-xs text-ink-soft dark:text-slate-500 shrink-0">
               {sp.done_count}/{sp.story_count}
             </div>
             {sp.status === "planning" && (
@@ -246,7 +246,7 @@ function SprintPanel({
             {sp.status === "active" && (
               <button
                 onClick={() => onCloseSprint(sp.id)}
-                className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg px-2.5 py-1 transition-colors"
+                className="text-xs bg-ink/10 dark:bg-slate-700 hover:bg-ink/15 dark:hover:bg-slate-600 text-ink/80 dark:text-slate-300 rounded-lg px-2.5 py-1 transition-colors"
               >
                 Close
               </button>
@@ -256,7 +256,7 @@ function SprintPanel({
       </div>
 
       {activeSprint && (
-        <div className="mt-3 pt-3 border-t border-slate-700/40 flex gap-4 text-xs text-slate-400">
+        <div className="mt-3 pt-3 border-t border-ink/10 dark:border-slate-700/40 flex gap-4 text-xs text-ink-soft dark:text-slate-400">
           <span>{doneInSprint}/{sprintStories.length} stories done</span>
           {vel > 0 && <span>{vel} pts velocity</span>}
         </div>
@@ -336,7 +336,7 @@ export function ProductDev() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64 text-slate-400 text-sm">
+      <div className="flex items-center justify-center h-64 text-ink-soft dark:text-slate-400 text-sm">
         Loading…
       </div>
     );
@@ -345,11 +345,11 @@ export function ProductDev() {
   if (projects.length === 0) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-slate-100">Product Dev</h1>
-        <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-8 text-center">
+        <h1 className="text-2xl font-bold text-ink dark:text-slate-100">Product Dev</h1>
+        <div className="bg-paper dark:bg-slate-800/40 border border-ink/10 dark:border-slate-700/50 rounded-2xl p-8 text-center">
           <div className="text-4xl mb-3">🚀</div>
-          <p className="text-slate-300 font-medium mb-1">No products yet</p>
-          <p className="text-slate-500 text-sm">
+          <p className="text-ink/80 dark:text-slate-300 font-medium mb-1">No products yet</p>
+          <p className="text-ink-soft dark:text-slate-500 text-sm">
             Go to <strong>Wall of Pains</strong> and promote a pain point to a project —
             it will appear here ready for sprint planning.
           </p>
@@ -372,22 +372,22 @@ export function ProductDev() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <h1 className="text-2xl font-bold text-slate-100">Product Dev</h1>
-        <span className="text-slate-500 text-sm">Scrum board for your product ideas</span>
+        <h1 className="text-2xl font-bold text-ink dark:text-slate-100">Product Dev</h1>
+        <span className="text-ink-soft dark:text-slate-500 text-sm">Scrum board for your product ideas</span>
       </div>
 
       <div className="flex gap-4">
         {/* Project list sidebar */}
         <aside className="w-52 shrink-0 space-y-1.5">
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-1 mb-2">Products</p>
+          <p className="text-[11px] font-semibold text-ink-soft dark:text-slate-500 uppercase tracking-wider px-1 mb-2">Products</p>
           {projects.map(p => (
             <button
               key={p.id}
               onClick={() => setSelectedId(p.id)}
               className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-all ${
                 p.id === selectedId
-                  ? "bg-blue-500/15 border-blue-500/30 text-slate-100"
-                  : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+                  ? "bg-blue-500/15 border-blue-500/30 text-ink dark:text-slate-100"
+                  : "border-transparent text-ink-soft dark:text-slate-400 hover:text-ink dark:hover:text-slate-200 hover:bg-ink/10 dark:hover:bg-slate-800/60"
               }`}
             >
               <div className="font-medium truncate">{p.name}</div>
@@ -401,7 +401,7 @@ export function ProductDev() {
                 >
                   {p.phase}
                 </span>
-                <span className="text-[10px] text-slate-500">{p.done_count}/{p.story_count} done</span>
+                <span className="text-[10px] text-ink-soft dark:text-slate-500">{p.done_count}/{p.story_count} done</span>
               </div>
             </button>
           ))}
@@ -411,11 +411,11 @@ export function ProductDev() {
         {selected && (
           <div className="flex-1 min-w-0 space-y-4">
             {/* Project header */}
-            <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-4">
+            <div className="bg-paper dark:bg-slate-800/40 border border-ink/10 dark:border-slate-700/60 rounded-2xl p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <h2 className="text-lg font-bold text-slate-100">{selected.name}</h2>
+                    <h2 className="text-lg font-bold text-ink dark:text-slate-100">{selected.name}</h2>
                     <span
                       className="text-xs px-2 py-0.5 rounded-full font-medium"
                       style={{
@@ -427,24 +427,24 @@ export function ProductDev() {
                     </span>
                   </div>
                   {selected.problem_statement && (
-                    <p className="text-sm text-slate-400">{selected.problem_statement}</p>
+                    <p className="text-sm text-ink-soft dark:text-slate-400">{selected.problem_statement}</p>
                   )}
                 </div>
                 <div className="flex gap-4 text-center shrink-0">
                   <div>
-                    <div className="text-lg font-bold text-slate-100">{totalDone}/{stories.length}</div>
-                    <div className="text-[10px] text-slate-500">stories done</div>
+                    <div className="text-lg font-bold text-ink dark:text-slate-100">{totalDone}/{stories.length}</div>
+                    <div className="text-[10px] text-ink-soft dark:text-slate-500">stories done</div>
                   </div>
                   {totalPoints > 0 && (
                     <div>
-                      <div className="text-lg font-bold text-slate-100">{donePoints}/{totalPoints}</div>
-                      <div className="text-[10px] text-slate-500">points</div>
+                      <div className="text-lg font-bold text-ink dark:text-slate-100">{donePoints}/{totalPoints}</div>
+                      <div className="text-[10px] text-ink-soft dark:text-slate-500">points</div>
                     </div>
                   )}
                   {activeSprint && (
                     <div>
                       <div className="text-lg font-bold text-blue-400">Sprint {activeSprint.number}</div>
-                      <div className="text-[10px] text-slate-500">active</div>
+                      <div className="text-[10px] text-ink-soft dark:text-slate-500">active</div>
                     </div>
                   )}
                 </div>
@@ -459,8 +459,8 @@ export function ProductDev() {
                   onClick={() => setView(v)}
                   className={`text-sm px-4 py-1.5 rounded-lg font-medium transition-colors ${
                     view === v
-                      ? "bg-slate-700 text-slate-100"
-                      : "text-slate-500 hover:text-slate-300"
+                      ? "bg-ink/10 dark:bg-slate-700 text-ink dark:text-slate-100"
+                      : "text-ink-soft dark:text-slate-500 hover:text-ink dark:hover:text-slate-300"
                   }`}
                 >
                   {v === "board" ? "🗂 Board" : "🏃 Sprints"}
@@ -485,10 +485,10 @@ export function ProductDev() {
                             className="h-2 w-2 rounded-full"
                             style={{ background: col.color }}
                           />
-                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                          <span className="text-xs font-semibold text-ink-soft dark:text-slate-400 uppercase tracking-wider">
                             {col.label}
                           </span>
-                          <span className="text-xs text-slate-600 ml-auto">{colStories.length}</span>
+                          <span className="text-xs text-ink-soft/70 dark:text-slate-600 ml-auto">{colStories.length}</span>
                         </div>
                         <div className="space-y-2 min-h-[4rem]">
                           {colStories.map(s => (

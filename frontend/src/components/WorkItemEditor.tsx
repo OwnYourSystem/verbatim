@@ -44,7 +44,7 @@ export function HoursBar({ spent, dedicated }: { spent: number; dedicated: numbe
   const over = spent > dedicated;
   return (
     <div className="flex items-center gap-2 min-w-[120px]">
-      <div className="flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+      <div className="flex-1 h-1.5 rounded-full bg-paper dark:bg-slate-800 overflow-hidden">
         <div
           className="h-full rounded-full transition-all"
           style={{
@@ -53,7 +53,7 @@ export function HoursBar({ spent, dedicated }: { spent: number; dedicated: numbe
           }}
         />
       </div>
-      <span className="metric text-[10px] text-slate-400 whitespace-nowrap">
+      <span className="metric text-[10px] text-ink-soft dark:text-slate-400 whitespace-nowrap">
         {spent}/{dedicated}h
       </span>
     </div>
@@ -61,7 +61,7 @@ export function HoursBar({ spent, dedicated }: { spent: number; dedicated: numbe
 }
 
 function TimeLeft({ days }: { days: number | null }) {
-  if (days == null) return <span className="text-[10px] text-slate-500">no due date</span>;
+  if (days == null) return <span className="text-[10px] text-ink-soft dark:text-slate-500">no due date</span>;
   const color =
     days < 0
       ? "var(--color-signal-crit)"
@@ -75,7 +75,7 @@ function TimeLeft({ days }: { days: number | null }) {
   );
 }
 
-const field = "text-[11px] text-slate-400 mb-1 block";
+const field = "text-[11px] text-ink-soft dark:text-slate-400 mb-1 block";
 const inp = "input-base w-full !py-1.5 text-sm";
 
 /** Full editable attribute form for a Task or Subtask. Saves on explicit Save button click. */
@@ -155,7 +155,7 @@ export function WorkItemEditor({
   const removeSK = (id: number) => setSks((prev) => prev.filter((s) => s.id !== id));
 
   return (
-    <div className="space-y-3 rounded-xl p-3 bg-slate-900/40 border border-slate-800">
+    <div className="space-y-3 rounded-xl p-3 bg-ink/5 dark:bg-slate-900/40 border border-ink/10 dark:border-slate-800">
       {/* Title + description */}
       <div>
         <label className={field}>Title</label>
@@ -250,7 +250,7 @@ export function WorkItemEditor({
 
       {/* Toggles */}
       <div className="flex flex-wrap gap-4">
-        <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+        <label className="flex items-center gap-2 text-xs text-ink/80 dark:text-slate-300 cursor-pointer">
           <input
             type="checkbox"
             checked={draft.data_exposure_concern}
@@ -259,7 +259,7 @@ export function WorkItemEditor({
           />
           🔒 Data exposure concern
         </label>
-        <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+        <label className="flex items-center gap-2 text-xs text-ink/80 dark:text-slate-300 cursor-pointer">
           <input
             type="checkbox"
             checked={draft.required_demo}
@@ -268,7 +268,7 @@ export function WorkItemEditor({
           />
           🎬 Required demo
         </label>
-        <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+        <label className="flex items-center gap-2 text-xs text-ink/80 dark:text-slate-300 cursor-pointer">
           <input
             type="checkbox"
             checked={draft.flagged}
@@ -280,9 +280,9 @@ export function WorkItemEditor({
       </div>
 
       {/* Hours budget + time logging */}
-      <div className="rounded-lg p-2.5 bg-slate-950/40 border border-slate-800 space-y-2">
+      <div className="rounded-lg p-2.5 bg-ink/5 dark:bg-slate-950/40 border border-ink/10 dark:border-slate-800 space-y-2">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-[11px] text-slate-400">Hours budget</span>
+          <span className="text-[11px] text-ink-soft dark:text-slate-400">Hours budget</span>
           <HoursBar spent={draft.spent_hours} dedicated={draft.dedicated_hours} />
           <span
             className="metric text-[11px]"
@@ -331,11 +331,11 @@ export function WorkItemEditor({
       </div>
 
       {/* Specific Knowledge — defined while setting up the work item */}
-      <div className="rounded-lg p-2.5 bg-slate-950/40 border border-slate-800 space-y-2">
+      <div className="rounded-lg p-2.5 bg-ink/5 dark:bg-slate-950/40 border border-ink/10 dark:border-slate-800 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-slate-400">
+          <span className="text-[11px] text-ink-soft dark:text-slate-400">
             Specific Knowledge
-            <span className="text-slate-600"> · earned on completion</span>
+            <span className="text-ink-soft/70 dark:text-slate-600"> · earned on completion</span>
           </span>
         </div>
 
@@ -354,7 +354,7 @@ export function WorkItemEditor({
                   <span className="font-bold">· {ratingLabel(sk.rating)}</span>
                   <button
                     onClick={() => removeSK(sk.id)}
-                    className="text-slate-500 hover:text-red-400"
+                    className="text-ink-soft dark:text-slate-500 hover:text-red-400"
                     title="Remove"
                   >
                     ×
@@ -401,7 +401,7 @@ export function WorkItemEditor({
             Add
           </button>
         </div>
-        <p className="text-[10px] text-slate-600">
+        <p className="text-[10px] text-ink-soft/70 dark:text-slate-600">
           AI suggests a HOT/WARM/COLD rating now; it's finalized when this item is completed. Changes save with the item.
         </p>
       </div>
