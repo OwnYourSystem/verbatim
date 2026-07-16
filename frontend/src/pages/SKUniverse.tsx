@@ -1,34 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { api } from "../api";
 import type { SKRating, SpecificKnowledge } from "../types";
-import { ratingColor, ratingGlow, ratingLabel } from "../components/Thermometer";
+import { ratingColor, ratingLabel } from "../components/Thermometer";
 
-// ── Rating → 3D placement ─────────────────────────────────────────────────────
-// HOT (rarest) orbits closest to the core; COLD orbits farthest out.
-const ORBIT: Record<SKRating, number> = { hot: 130, warm: 230, cold: 330 };
-const PLANET_SIZE: Record<SKRating, number> = { hot: 46, warm: 32, cold: 20 };
+// ── Rating → orbit placement (world units) ───────────────────────────────────
+// HOT (rarest) orbits closest to the sun; COLD orbits farthest out.
+const ORBIT: Record<SKRating, number> = { hot: 3.2, warm: 5.2, cold: 7.4 };
+const PLANET_SIZE: Record<SKRating, number> = { hot: 0.5, warm: 0.36, cold: 0.24 };
 
-const IDLE_SPIN_DEG_PER_MS = 0.006; // gentle constant drift when nothing else is happening
-const FRICTION = 0.94; // per-frame velocity decay after a flick/drag release
-const MIN_ZOOM = 0.5;
-const MAX_ZOOM = 2.6;
-const MIN_TILT = 10;
-const MAX_TILT = 85;
-
-function planetColor(r: SKRating) {
-  return ratingColor(r);
-}
-
-// ── Generate random stars ────────────────────────────────────────────────────
-const STARS = Array.from({ length: 160 }, (_, i) => ({
-  id: i,
-  x: Math.random() * 100,
-  y: Math.random() * 100,
-  size: 0.8 + Math.random() * 1.8,
-  opacity: 0.3 + Math.random() * 0.7,
-}));
-
-// ── Assign angles to planets that share an orbit ────────────────────────────
 function assignAngles(planets: SpecificKnowledge[]): Map<number, number> {
   const orbitGroups = new Map<number, number[]>();
   planets.forEach((sk) => {
@@ -39,221 +20,305 @@ function assignAngles(planets: SpecificKnowledge[]): Map<number, number> {
   const result = new Map<number, number>();
   orbitGroups.forEach((ids) => {
     ids.forEach((id, i) => {
-      result.set(id, (360 / ids.length) * i + 30);
+      result.set(id, (Math.PI * 2 * i) / ids.length + 0.5);
     });
   });
   return result;
 }
 
-/** The sun — layered radial gradient body, a rotating granulation/flare
- *  texture clipped to the disc, and a slow-pulsing corona glow. Pure CSS
- *  (no WebGL), in keeping with the rest of this lightweight scene. */
-function SunCore() {
-  return (
-    <div
-      className="absolute pointer-events-none"
-      style={{ width: 96, height: 96, left: "50%", top: "50%", marginLeft: -48, marginTop: -48 }}
-    >
-      {/* Corona — soft outer glow, breathing. A radial-gradient rather than a
-          box-shadow: box-shadow can rasterize as a hard edge under an
-          ancestor's 3D transform in Chromium, which read as an unwanted
-          ring around the disc once tilted. */}
-      <div
-        className="absolute rounded-full"
-        style={{
-          inset: "-70%",
-          background:
-            "radial-gradient(circle, rgba(255,190,60,0.5) 0%, rgba(255,150,20,0.28) 38%, rgba(255,110,0,0.12) 60%, transparent 75%)",
-          animation: "sun-corona-pulse 4s ease-in-out infinite",
-        }}
-      />
-      {/* Photosphere body — gradient itself carries the limb-darkening falloff
-          toward the edge, so it survives the elliptical squash from the 3D
-          tilt without an inset-shadow ring artifact. */}
-      <div
-        className="absolute inset-0 rounded-full overflow-hidden"
-        style={{
-          background: "radial-gradient(circle at 38% 35%, #fff9d6, #ffe066 34%, #ffab1f 60%, #e8620f 82%, #b93a0a 100%)",
-        }}
-      >
-        {/* Rotating surface granulation / flare texture, clipped to the disc */}
-        <div
-          className="absolute"
-          style={{
-            inset: "-20%",
-            animation: "sun-surface-rotate 22s linear infinite",
-            background:
-              "radial-gradient(circle at 30% 70%, rgba(255,255,255,0.3), transparent 22%)," +
-              "radial-gradient(circle at 75% 30%, rgba(255,240,180,0.25), transparent 20%)," +
-              "radial-gradient(circle at 60% 80%, rgba(200,50,0,0.3), transparent 25%)",
-          }}
-        />
-      </div>
-    </div>
+/** Procedurally painted sun surface — radial base + turbulent blobs — baked
+ *  to a canvas and used as a real texture on a real sphere, so it rotates
+ *  and lights like an actual 3D object instead of a flat CSS illusion. */
+function makeSunTexture(): THREE.CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+
+  const base = ctx.createRadialGradient(
+    size * 0.4, size * 0.38, size * 0.05,
+    size * 0.5, size * 0.5, size * 0.62,
   );
+  base.addColorStop(0, "#fff9d6");
+  base.addColorStop(0.35, "#ffe066");
+  base.addColorStop(0.62, "#ffab1f");
+  base.addColorStop(1, "#c8460c");
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, size, size);
+
+  // Turbulent granulation blobs, tiled so the wrap seam isn't obvious.
+  const rand = (seed: number) => {
+    const x = Math.sin(seed) * 43758.5453;
+    return x - Math.floor(x);
+  };
+  for (let i = 0; i < 90; i++) {
+    const x = rand(i * 12.9898) * size;
+    const y = rand(i * 78.233) * size;
+    const r = 10 + rand(i * 37.719) * 40;
+    const tone = rand(i * 4.14);
+    const color = tone > 0.5 ? "255,250,220" : "200,60,10";
+    const alpha = 0.08 + rand(i * 91.7) * 0.15;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(${color},${alpha})`);
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  return tex;
+}
+
+/** A soft radial-gradient sprite, used for the corona and each planet's glow
+ *  — the standard lightweight technique for glows in a real-time 3D scene
+ *  without a full bloom post-processing pass. */
+function makeGlowTexture(colorHex: string): THREE.CanvasTexture {
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  g.addColorStop(0, colorHex + "cc");
+  g.addColorStop(0.4, colorHex + "55");
+  g.addColorStop(1, colorHex + "00");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  return new THREE.CanvasTexture(canvas);
+}
+
+interface PlanetMesh {
+  mesh: THREE.Mesh;
+  sk: SpecificKnowledge;
 }
 
 export function SKUniverse() {
-  const [sks, setSks] = useState<SpecificKnowledge[]>([]);
-  const [spin, setSpin] = useState(20);
-  const [tilt, setTilt] = useState(55);
-  const [zoom, setZoom] = useState(1);
-  const [dragging, setDragging] = useState(false);
-  const [tooltip, setTooltip] = useState<{ sk: SpecificKnowledge; x: number; y: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const planetsGroupRef = useRef<THREE.Group | null>(null);
+  const planetMeshesRef = useRef<PlanetMesh[]>([]);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
+  const raycasterRef = useRef(new THREE.Raycaster());
 
-  const spinRef = useRef(20);
-  const tiltRef = useRef(55);
-  const zoomRef = useRef(1);
-  const velocityRef = useRef({ x: 0, y: 0 }); // deg/ms, decays after release (momentum)
-  const lastPointRef = useRef({ x: 0, y: 0, t: 0 });
-  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
-  const pinchStartDistRef = useRef<number | null>(null);
-  const pinchStartZoomRef = useRef(1);
-  const rafRef = useRef<number | null>(null);
-  const draggingRef = useRef(false);
+  const [sks, setSks] = useState<SpecificKnowledge[]>([]);
+  const [tooltip, setTooltip] = useState<{ sk: SpecificKnowledge; x: number; y: number } | null>(null);
 
   useEffect(() => {
     api.listSKs().then((all) => setSks(all.filter((sk) => sk.in_universe)));
   }, []);
 
-  // Single animation loop: idle auto-drift + momentum decay after a flick.
-  // Momentum smoothly bleeds into the same constant idle drift rather than
-  // fighting it, so there's no jarring hand-off when a flick settles.
+  // ── One-time scene setup ────────────────────────────────────────────────
   useEffect(() => {
-    let lastT = performance.now();
-    const tick = (t: number) => {
-      const dt = Math.min(48, t - lastT); // clamp so a stalled tab doesn't jump
-      lastT = t;
-      if (!draggingRef.current) {
-        spinRef.current = (spinRef.current + IDLE_SPIN_DEG_PER_MS * dt + velocityRef.current.x * dt) % 360;
-        tiltRef.current = Math.max(
-          MIN_TILT,
-          Math.min(MAX_TILT, tiltRef.current + velocityRef.current.y * dt),
-        );
-        velocityRef.current.x *= FRICTION;
-        velocityRef.current.y *= FRICTION;
-        if (Math.abs(velocityRef.current.x) < 0.00002) velocityRef.current.x = 0;
-        if (Math.abs(velocityRef.current.y) < 0.00002) velocityRef.current.y = 0;
-        setSpin(spinRef.current);
-        setTilt(tiltRef.current);
+    const container = containerRef.current;
+    if (!container) return;
+
+    const scene = new THREE.Scene();
+    sceneRef.current = scene;
+
+    const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 200);
+    camera.position.set(0, 6.5, 11);
+    cameraRef.current = camera;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setClearColor(0x020408, 1);
+    container.appendChild(renderer.domElement);
+    rendererRef.current = renderer;
+
+    // Real orbit-camera controls: single-finger/mouse drag to rotate, pinch
+    // or scroll to zoom, built-in momentum via damping — this is the exact
+    // interaction model of NASA's Eyes/Earth-Now apps.
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.enablePan = false;
+    controls.minDistance = 4;
+    controls.maxDistance = 26;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.35;
+    controlsRef.current = controls;
+
+    // Starfield
+    const starGeo = new THREE.BufferGeometry();
+    const starCount = 1800;
+    const positions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      const r = 60 + Math.random() * 60;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i * 3 + 2] = r * Math.cos(phi);
+    }
+    starGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const stars = new THREE.Points(
+      starGeo,
+      new THREE.PointsMaterial({ color: 0xffffff, size: 0.12, sizeAttenuation: true }),
+    );
+    scene.add(stars);
+
+    // Sun
+    const sunTexture = makeSunTexture();
+    const sunMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(1.5, 64, 64),
+      new THREE.MeshBasicMaterial({ map: sunTexture }),
+    );
+    scene.add(sunMesh);
+
+    const corona = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: makeGlowTexture("#ffaa33"),
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    );
+    corona.scale.set(6, 6, 1);
+    scene.add(corona);
+
+    // Orbit rings
+    const orbitRadii = Object.values(ORBIT);
+    for (const r of orbitRadii) {
+      const points: THREE.Vector3[] = [];
+      for (let i = 0; i <= 128; i++) {
+        const a = (i / 128) * Math.PI * 2;
+        points.push(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r));
       }
-      rafRef.current = requestAnimationFrame(tick);
+      const ring = new THREE.LineLoop(
+        new THREE.BufferGeometry().setFromPoints(points),
+        new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.08 }),
+      );
+      scene.add(ring);
+    }
+
+    const planetsGroup = new THREE.Group();
+    scene.add(planetsGroup);
+    planetsGroupRef.current = planetsGroup;
+
+    let raf = 0;
+    const clock = new THREE.Clock();
+    const tick = () => {
+      const dt = clock.getDelta();
+      sunMesh.rotation.y += dt * 0.05;
+      const pulse = 1 + Math.sin(clock.elapsedTime * 1.4) * 0.06;
+      corona.scale.set(6 * pulse, 6 * pulse, 1);
+      controls.update();
+      renderer.render(scene, camera);
+      raf = requestAnimationFrame(tick);
     };
-    rafRef.current = requestAnimationFrame(tick);
+    raf = requestAnimationFrame(tick);
+
+    const onResize = () => {
+      if (!container) return;
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    };
+    const resizeObserver = new ResizeObserver(onResize);
+    resizeObserver.observe(container);
+
+    // Hover (desktop) + tap (any pointer) → raycast for the tooltip.
+    const pointer = new THREE.Vector2();
+    const raycast = (clientX: number, clientY: number) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+      raycasterRef.current.setFromCamera(pointer, camera);
+      const meshes = planetMeshesRef.current.map((p) => p.mesh);
+      const hits = raycasterRef.current.intersectObjects(meshes);
+      if (hits.length > 0) {
+        const hit = planetMeshesRef.current.find((p) => p.mesh === hits[0].object);
+        if (hit) {
+          setTooltip({ sk: hit.sk, x: clientX, y: clientY });
+          return;
+        }
+      }
+      setTooltip(null);
+    };
+    const onPointerMove = (e: PointerEvent) => raycast(e.clientX, e.clientY);
+    const onClick = (e: MouseEvent) => raycast(e.clientX, e.clientY);
+    renderer.domElement.addEventListener("pointermove", onPointerMove);
+    renderer.domElement.addEventListener("click", onClick);
+
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      cancelAnimationFrame(raf);
+      resizeObserver.disconnect();
+      renderer.domElement.removeEventListener("pointermove", onPointerMove);
+      renderer.domElement.removeEventListener("click", onClick);
+      controls.dispose();
+      renderer.dispose();
+      sunTexture.dispose();
+      container.removeChild(renderer.domElement);
     };
   }, []);
 
-  const pinchDistance = () => {
-    const pts = [...pointersRef.current.values()];
-    if (pts.length < 2) return null;
-    const [a, b] = pts;
-    return Math.hypot(a.x - b.x, a.y - b.y);
-  };
+  // ── Rebuild planet meshes whenever the data changes ─────────────────────
+  useEffect(() => {
+    const group = planetsGroupRef.current;
+    if (!group) return;
 
-  const onPointerDown = (e: React.PointerEvent) => {
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-    if (pointersRef.current.size === 2) {
-      // Second finger down — switch to pinch-zoom mode.
-      pinchStartDistRef.current = pinchDistance();
-      pinchStartZoomRef.current = zoomRef.current;
-      draggingRef.current = false;
-      setDragging(false);
-    } else {
-      draggingRef.current = true;
-      setDragging(true);
-      velocityRef.current = { x: 0, y: 0 };
-      lastPointRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
-    }
-  };
-
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!pointersRef.current.has(e.pointerId)) return;
-    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-    if (pointersRef.current.size === 2) {
-      // Pinch-to-zoom — the touch-native equivalent of the desktop scroll wheel.
-      const dist = pinchDistance();
-      if (dist && pinchStartDistRef.current) {
-        const nextZoom = pinchStartZoomRef.current * (dist / pinchStartDistRef.current);
-        zoomRef.current = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, nextZoom));
-        setZoom(zoomRef.current);
+    // Clear previous planets.
+    for (const child of [...group.children]) {
+      group.remove(child);
+      if (child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+        (child.material as THREE.Material).dispose();
       }
-      return;
     }
+    planetMeshesRef.current = [];
 
-    if (!draggingRef.current) return;
-    const now = performance.now();
-    const dx = e.clientX - lastPointRef.current.x;
-    const dy = e.clientY - lastPointRef.current.y;
-    const dt = Math.max(1, now - lastPointRef.current.t);
+    const angles = assignAngles(sks);
+    for (const sk of sks) {
+      const angle = angles.get(sk.id) ?? 0;
+      const r = ORBIT[sk.rating];
+      const size = PLANET_SIZE[sk.rating];
+      const color = ratingColor(sk.rating);
 
-    spinRef.current = (spinRef.current + dx * 0.4) % 360;
-    tiltRef.current = Math.max(MIN_TILT, Math.min(MAX_TILT, tiltRef.current - dy * 0.3));
-    setSpin(spinRef.current);
-    setTilt(tiltRef.current);
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(size, 32, 32),
+        new THREE.MeshBasicMaterial({ color }),
+      );
+      mesh.position.set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+      group.add(mesh);
 
-    // Track instantaneous velocity so a flick keeps drifting after release.
-    velocityRef.current = { x: (dx * 0.4) / dt, y: (-dy * 0.3) / dt };
-    lastPointRef.current = { x: e.clientX, y: e.clientY, t: now };
-  };
+      const glow = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: makeGlowTexture(color),
+          transparent: true,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        }),
+      );
+      glow.scale.set(size * 4.5, size * 4.5, 1);
+      mesh.add(glow);
 
-  const endPointer = (e: React.PointerEvent) => {
-    pointersRef.current.delete(e.pointerId);
-    if (pointersRef.current.size < 2) pinchStartDistRef.current = null;
-    if (pointersRef.current.size === 0) {
-      draggingRef.current = false;
-      setDragging(false);
+      planetMeshesRef.current.push({ mesh, sk });
     }
+  }, [sks]);
+
+  const resetView = () => {
+    const controls = controlsRef.current;
+    const camera = cameraRef.current;
+    if (!controls || !camera) return;
+    camera.position.set(0, 6.5, 11);
+    controls.target.set(0, 0, 0);
+    controls.update();
   };
-
-  const onWheel = (e: React.WheelEvent) => {
-    zoomRef.current = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomRef.current - e.deltaY * 0.001));
-    setZoom(zoomRef.current);
-  };
-
-  const resetView = useCallback(() => {
-    zoomRef.current = 1;
-    tiltRef.current = 55;
-    velocityRef.current = { x: 0, y: 0 };
-    setZoom(1);
-    setTilt(55);
-  }, []);
-
-  const uniqueOrbits = [...new Set(sks.map((sk) => ORBIT[sk.rating]))].sort((a, b) => a - b);
-  const angles = assignAngles(sks);
 
   return (
     <div
       className="relative w-full overflow-hidden select-none touch-none"
-      style={{ height: "calc(100vh - 3.5rem)", background: "#020408", cursor: dragging ? "grabbing" : "grab" }}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={endPointer}
-      onPointerCancel={endPointer}
-      onPointerLeave={endPointer}
-      onWheel={onWheel}
+      style={{ height: "calc(100vh - 3.5rem)", background: "#020408" }}
     >
-      {/* Stars */}
-      {STARS.map((s) => (
-        <div
-          key={s.id}
-          className="absolute rounded-full bg-white pointer-events-none"
-          style={{ left: `${s.x}%`, top: `${s.y}%`, width: s.size, height: s.size, opacity: s.opacity }}
-        />
-      ))}
-
-      {/* Milky Way band */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(125deg, transparent 20%, rgba(130,80,200,0.06) 35%, rgba(180,120,255,0.1) 50%, rgba(130,80,200,0.06) 65%, transparent 80%)",
-        }}
-      />
+      <div ref={containerRef} className="absolute inset-0" />
 
       {/* Page label */}
       <div className="absolute top-4 left-6 z-20 pointer-events-none">
@@ -282,74 +347,6 @@ export function SKUniverse() {
         <p className="text-[9px] text-slate-600 pt-1">Closer = rarer · Bigger = rarer</p>
       </div>
 
-      {/* 3D scene */}
-      <div
-        className="absolute inset-0 flex items-center justify-center"
-        style={{ perspective: "900px", perspectiveOrigin: "50% 40%" }}
-      >
-        <div
-          style={{
-            transformStyle: "preserve-3d",
-            transform: `scale(${zoom}) rotateX(${tilt}deg) rotateZ(${spin}deg)`,
-            width: 800,
-            height: 800,
-            position: "relative",
-          }}
-        >
-          {/* Orbital rings */}
-          {uniqueOrbits.map((r) => (
-            <div
-              key={r}
-              className="absolute rounded-full pointer-events-none"
-              style={{
-                width: r * 2,
-                height: r * 2,
-                left: "50%",
-                top: "50%",
-                marginLeft: -r,
-                marginTop: -r,
-                border: "1px solid rgba(255,255,255,0.08)",
-              }}
-            />
-          ))}
-
-          <SunCore />
-
-          {/* Planets */}
-          {sks.map((sk) => {
-            const angle = angles.get(sk.id) ?? 0;
-            const r = ORBIT[sk.rating];
-            const rad = (angle * Math.PI) / 180;
-            const x = r * Math.cos(rad);
-            const y = r * Math.sin(rad);
-            const size = PLANET_SIZE[sk.rating];
-            const color = planetColor(sk.rating);
-
-            return (
-              <div
-                key={sk.id}
-                className="absolute rounded-full"
-                style={{
-                  width: size,
-                  height: size,
-                  left: `calc(50% + ${x}px)`,
-                  top: `calc(50% + ${y}px)`,
-                  marginLeft: -size / 2,
-                  marginTop: -size / 2,
-                  background: `radial-gradient(circle at 38% 35%, rgba(255,255,255,0.35), ${color})`,
-                  boxShadow: ratingGlow(sk.rating),
-                  cursor: "pointer",
-                  zIndex: 10,
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onMouseEnter={(e) => setTooltip({ sk, x: e.clientX, y: e.clientY })}
-                onMouseLeave={() => setTooltip(null)}
-              />
-            );
-          })}
-        </div>
-      </div>
-
       {/* Empty state */}
       {sks.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -361,25 +358,24 @@ export function SKUniverse() {
         </div>
       )}
 
-      {/* Tooltip (outside 3D transform — stays flat) */}
+      {/* Tooltip */}
       {tooltip && (
-        <div
-          className="fixed z-50 pointer-events-none"
-          style={{ left: tooltip.x + 12, top: tooltip.y - 10 }}
-        >
+        <div className="fixed z-50 pointer-events-none" style={{ left: tooltip.x + 12, top: tooltip.y - 10 }}>
           <div
             className="rounded-lg px-3 py-2 text-xs shadow-xl"
             style={{
               background: "rgba(10,15,30,0.95)",
-              border: `1px solid ${planetColor(tooltip.sk.rating)}44`,
+              border: `1px solid ${ratingColor(tooltip.sk.rating)}44`,
               backdropFilter: "blur(8px)",
             }}
           >
             <p className="font-bold text-white">{tooltip.sk.name}</p>
-            <p style={{ color: planetColor(tooltip.sk.rating) }} className="mt-0.5">
+            <p style={{ color: ratingColor(tooltip.sk.rating) }} className="mt-0.5">
               {ratingLabel(tooltip.sk.rating)}
             </p>
-            <p className="text-slate-400 mt-0.5">{tooltip.sk.completed_count} task{tooltip.sk.completed_count !== 1 ? "s" : ""} completed</p>
+            <p className="text-slate-400 mt-0.5">
+              {tooltip.sk.completed_count} task{tooltip.sk.completed_count !== 1 ? "s" : ""} completed
+            </p>
           </div>
         </div>
       )}

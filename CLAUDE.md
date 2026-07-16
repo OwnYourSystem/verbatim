@@ -18,7 +18,7 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 **Both frontend and backend now auto-deploy on push to `main`.** No manual deploy steps needed going forward.
 
-**Do next:** (1) Merge `feature/sk-universe-sun-refinement` (NASA Eyes-style sun + momentum drag + pinch-zoom — see 2026-07-16 entry below) and deploy. (2) Build the Timer/Focus feature (pick a Specific Knowledge → find its tasks → countdown → Achievements on Today). (3) Smoke-test the full Product Dev flow: Wall of Pains → create project → Product Dev → sprints + stories. (4) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
+**Do next:** (1) Merge `feature/sk-universe-webgl` (real WebGL 3D rendering — see 2026-07-16 entry below) and deploy. (2) Build the Timer/Focus feature (pick a Specific Knowledge → find its tasks → countdown → Achievements on Today). (3) Smoke-test the full Product Dev flow: Wall of Pains → create project → Product Dev → sprints + stories. (4) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
 
 **Live agent is ON:** `backend/.env` has a real (rotated) key, so `get_llm()`/`get_intake()` use real Claude when the backend runs. Not yet smoke-tested live (needs backend running against local Postgres). Tests stay offline via `tests/conftest.py`.
 
@@ -90,6 +90,18 @@ MindAnchor — a personal, single-user AI productivity system (AI project manage
 ---
 
 ## Action log
+
+### 2026-07-16 — SK Universe: rebuilt with real WebGL 3D (Three.js)
+
+Owner tested the CSS-based sun refinement (previous entry) and rejected it outright — "nothing alike with the Earth Now App at all." Correct call: NASA's Earth-Now/Eyes apps render an actual textured 3D sphere with real camera-orbit perspective (confirmed via web search after the App Store/NASA pages 403'd WebFetch — "the 3D model of the Earth may be rotated by a single finger stroke, and may also be zoomed by pinching 2 fingers"). A flat CSS radial-gradient trick can approximate a sphere from one fixed angle but can't reproduce that — there's no real depth to rotate around. Rebuilt on branch `feature/sk-universe-webgl` using genuine WebGL instead of trying to tune the CSS version further.
+
+- **Added `three` + `@types/three`.** Real `THREE.Scene`/`PerspectiveCamera`/`WebGLRenderer` in a vanilla-Three.js setup (no React-Three-Fiber — kept the dependency footprint to just `three` itself). Two effects: one-time scene setup (renderer/camera/controls/starfield/sun, mount-once), and a second effect keyed on `[sks]` that rebuilds the planet meshes whenever the data changes, without tearing down the renderer.
+- **`OrbitControls`** (from `three/examples/jsm/controls/OrbitControls.js`) replaces all the hand-rolled drag/momentum/pinch-zoom math from the previous pass — real orbit-camera control with built-in damping (momentum), pinch-to-zoom on touch, and scroll-zoom on desktop, out of the box. This is the actual mechanism Earth-Now uses, not an approximation of it.
+- **Sun** — real `SphereGeometry` + a procedurally-painted `CanvasTexture` (radial base gradient + randomized turbulent blobs baked to an offscreen canvas, no external image asset), self-rotating. **Corona/planet glow** — `Sprite` + additive-blended radial-gradient texture (the standard lightweight glow technique in real-time 3D, avoids a full bloom post-process pass).
+- **Planets** — real spheres positioned on the XZ plane at each rating's orbit radius, colored per rating, each with its own small glow sprite. **Tooltip** — `Raycaster` against the planet meshes on `pointermove` (hover) and `click` (tap), same info panel as before.
+- **Bundle size**: `three` alone pushes the main JS bundle from ~370KB to ~900KB. Code-split via `React.lazy()` in `main.tsx` so it only loads on the `/sk-universe` route — confirmed via build output that the main bundle stayed at ~366KB and Three.js landed in its own ~546KB (137KB gzip) chunk that's fetched on demand.
+- **Verified live in a real (software) WebGL context**, not just built: launched headless Chromium with `--use-gl=swiftshader` (this sandbox has no GPU), confirmed a live `WebGLRenderingContext` exists on the canvas, then screenshotted: initial render (textured rotating sun, correct perspective on two planets at different depths), a mouse-drag rotating the camera to a genuinely different angle, scroll-wheel zoom changing the sphere's apparent size with correct perspective, Reset View returning to the start position, and hovering a planet producing the raycasted tooltip with correct SK data. All real 3D behavior, confirmed via pixels, not asserted.
+- **Also verified:** 53 backend tests pass (no backend files touched), tsc clean, vite build OK (main bundle unaffected, SK Universe chunk isolated).
 
 ### 2026-07-16 — SK Universe: NASA Eyes-style sun + momentum drag + pinch-zoom
 
