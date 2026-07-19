@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     )
 
     # App
-    app_name: str = "MindAnchor"
+    app_name: str = "Verbatim"
     environment: str = "development"
     debug: bool = False
 
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # Render injects DATABASE_URL from the add-on with a bare ``postgres://``
     # scheme; the validator below rewrites it to postgresql+psycopg2:// since
     # SQLAlchemy 2.x no longer accepts the ``postgres`` alias.
-    database_url: str = "postgresql+psycopg2://mindanchor:mindanchor@localhost:5432/mindanchor"
+    database_url: str = "postgresql+psycopg2://verbatim:verbatim@localhost:5432/verbatim"
 
     # Auth (single-user JWT)
     jwt_secret: str = "change-me-in-production"
@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     model_planning: str = "claude-opus-4-8"
     model_fast: str = "claude-sonnet-4-6"
 
-    # CORS — comma-separated in env: CORS_ORIGINS=https://mindanchor.vercel.app,https://custom.domain
+    # CORS — comma-separated in env: CORS_ORIGINS=https://verbatim.vercel.app,https://custom.domain
     # NoDecode: skip pydantic-settings' JSON pre-decoding of this complex-typed
     # env var so the validator below owns all parsing. Without it, an empty or
     # plain-string CORS_ORIGINS raises JSONDecodeError at startup before the

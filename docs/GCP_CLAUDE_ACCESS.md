@@ -44,7 +44,7 @@ The output looks like this (values are truncated):
 {
   "client_id": "764086051850-...apps.googleusercontent.com",
   "client_secret": "d-FL95Q...",
-  "quota_project_id": "mindanchor-500313",
+  "quota_project_id": "<VERBATIM_GCP_PROJECT_ID>",
   "refresh_token": "1//0g...",
   "type": "authorized_user",
   "universe_domain": "googleapis.com"
@@ -64,8 +64,8 @@ Go to your Claude Code web project settings (the project that contains this repo
 | Name | Value |
 |---|---|
 | `GOOGLE_ADC_JSON` | *(paste the full JSON from Step 1 — keep it on one line or as-is)* |
-| `GOOGLE_CLOUD_PROJECT` | `mindanchor-500313` |
-| `CLOUDSDK_CORE_PROJECT` | `mindanchor-500313` |
+| `GOOGLE_CLOUD_PROJECT` | `<VERBATIM_GCP_PROJECT_ID>` |
+| `CLOUDSDK_CORE_PROJECT` | `<VERBATIM_GCP_PROJECT_ID>` |
 
 > `GOOGLE_ADC_JSON` is a secret — mark it as such in the settings UI so it is not echoed in logs.
 
@@ -125,14 +125,14 @@ Paste this verbatim as the session's startup / setup script.
 The OAuth credentials authenticate *you*, but you still need the right permissions on the project. If you are already the project Owner nothing extra is needed. Otherwise, grant your Google account the Editor role:
 
 ```powershell
-gcloud projects add-iam-policy-binding mindanchor-500313 `
+gcloud projects add-iam-policy-binding <VERBATIM_GCP_PROJECT_ID> `
   --member="user:behnam@ownyoursystem.com" `
   --role="roles/editor"
 ```
 
 Or do it via the GCP Console → IAM → Grant access → your email → `roles/editor`.
 
-`roles/editor` covers Cloud Run, Cloud Build, Cloud SQL, Artifact Registry, and Cloud Storage — everything MindAnchor needs. If you later want tighter scopes, replace with:
+`roles/editor` covers Cloud Run, Cloud Build, Cloud SQL, Artifact Registry, and Cloud Storage — everything Verbatim needs. If you later want tighter scopes, replace with:
 
 | Task | Role |
 |---|---|
@@ -153,7 +153,7 @@ gcloud config get-value project
 gcloud run services list --region europe-north2
 ```
 
-You should see your account listed as `ACTIVE`, the project set to `mindanchor-500313`, and the MindAnchor Cloud Run services listed.
+You should see your account listed as `ACTIVE`, the project set to `<VERBATIM_GCP_PROJECT_ID>`, and the Verbatim Cloud Run services listed.
 
 ---
 

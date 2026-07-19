@@ -1,4 +1,4 @@
-"""Generate the MindAnchor architecture diagram as a JPEG.
+"""Generate the Verbatim architecture diagram as a JPEG.
 
 Run:  python docs/architecture_diagram.py
 Output: docs/architecture.jpg
@@ -60,7 +60,7 @@ def label(x, y, text, color=SLATE, size=7.8, style="italic"):
 
 
 # ---- title ----
-ax.text(65, 92.5, "MindAnchor — System Architecture", ha="center",
+ax.text(65, 92.5, "Verbatim — System Architecture", ha="center",
         fontsize=20, fontweight="bold", color=EMERALD)
 ax.text(65, 88.2, "Google Cloud (region europe-north2) · skeleton-first · human-gated AI",
         ha="center", fontsize=10.5, color=SLATE, style="italic")
@@ -71,20 +71,20 @@ box(20, 76, 42, 9, "User  ·  Browser / installable PWA",
     ["HTTPS"], edge=BLUE, line_size=8.5)
 
 # Frontend Cloud Run
-box(14, 58, 54, 13, "Frontend  —  Cloud Run  (mindanchor-frontend)",
+box(14, 58, 54, 13, "Frontend  —  Cloud Run  (verbatim-frontend)",
     ["React + TypeScript + Vite + Tailwind (SPA)",
      "served by nginx · proxies  /api/  →  backend"],
     edge=EMERALD_DK)
 
 # Backend Cloud Run
-box(14, 37, 54, 14, "Backend API  —  Cloud Run  (mindanchor)",
+box(14, 37, 54, 14, "Backend API  —  Cloud Run  (verbatim)",
     ["FastAPI + uvicorn · SQLAlchemy · single-user JWT",
      "routers: systems · tasks · dashboard · reports",
      "rebalance · intake · agents · pains · auth"],
     edge=EMERALD_DK)
 
 # Cloud SQL
-box(14, 18, 54, 12, "Cloud SQL  —  PostgreSQL  (mindanchor-db)",
+box(14, 18, 54, 12, "Cloud SQL  —  PostgreSQL  (verbatim-db)",
     ["Alembic migrations 0001–0008",
      "System → Task → Subtask domain model"],
     edge=BLUE)
@@ -108,7 +108,7 @@ arrow(68, 42, 84, 33, color=VIOLET, rad=-0.12)
 label(76.5, 39.2, "calls", color=VIOLET)
 
 # ===== CI/CD PATH (right column, top) =====
-box(78, 74, 42, 11, "GitHub  ·  OwnYourSystem/MindAnchor",
+box(78, 74, 42, 11, "GitHub  ·  OwnYourSystem/verbatim",
     ["private repo · push to  main",
      "backend/ · frontend/ · mobile/"],
     edge=CARD_EDGE, title_color=WHITE)

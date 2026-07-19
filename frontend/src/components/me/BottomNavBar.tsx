@@ -4,7 +4,7 @@ import { clearToken } from "../../api";
 import { useTheme } from "../../theme";
 import { ME_ACCENT, ME_BG, ME_BORDER, ME_GHOST_BG, ME_INK, ME_INK_SOFT, ME_OVERLAY, ME_SURFACE, ME_SURFACE_SOFT } from "./tokens";
 
-/** Thumb-reachable primary tabs. MindAnchor has 11 destinations — more than a
+/** Thumb-reachable primary tabs. Verbatim has 11 destinations — more than a
  *  bottom bar can hold — so the 3 most-used stay pinned and the rest live in
  *  the "More" sheet, which is still bottom-anchored and one tap away. */
 const PRIMARY = [

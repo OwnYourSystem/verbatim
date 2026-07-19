@@ -249,7 +249,7 @@ function ProjectPanel({
             disabled={creatingSystem}
             className="flex items-center gap-1.5 text-sm px-4 py-1.5 rounded-lg border border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 font-semibold transition-all disabled:opacity-40"
           >
-            {creatingSystem ? "Creating…" : "Create System in MindAnchor →"}
+            {creatingSystem ? "Creating…" : "Create System in Verbatim →"}
           </button>
         )}
         {proj?.system_id && (

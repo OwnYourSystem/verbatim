@@ -6,9 +6,9 @@ set -euo pipefail
 
 PROJECT_ID="${PROJECT_ID:?Set PROJECT_ID}"
 REGION="${REGION:-europe-west1}"
-INSTANCE="mindanchor-db"
-DB_NAME="mindanchor"
-DB_USER="mindanchor"
+INSTANCE="verbatim-db"
+DB_NAME="verbatim"
+DB_USER="verbatim"
 
 echo "=== 1. Enable required APIs ==="
 gcloud services enable \
@@ -41,30 +41,30 @@ SOCKET_PATH="/cloudsql/${PROJECT_ID}:${REGION}:${INSTANCE}"
 DB_URL="postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@/${DB_NAME}?host=${SOCKET_PATH}"
 
 echo "=== 4. Store secrets in Secret Manager ==="
-echo -n "$DB_URL" | gcloud secrets create mindanchor-db-url \
+echo -n "$DB_URL" | gcloud secrets create verbatim-db-url \
   --data-file=- --project "$PROJECT_ID"
 
 JWT_SECRET=$(openssl rand -base64 48)
-echo -n "$JWT_SECRET" | gcloud secrets create mindanchor-jwt-secret \
+echo -n "$JWT_SECRET" | gcloud secrets create verbatim-jwt-secret \
   --data-file=- --project "$PROJECT_ID"
 
 # ANTHROPIC_API_KEY — set manually after running this script:
-# echo -n "sk-ant-..." | gcloud secrets create mindanchor-anthropic-key --data-file=- --project "$PROJECT_ID"
+# echo -n "sk-ant-..." | gcloud secrets create verbatim-anthropic-key --data-file=- --project "$PROJECT_ID"
 
 # CORS_ORIGINS — update after Vercel deploy gives you the URL:
-echo -n "https://mindanchor.vercel.app" | gcloud secrets create mindanchor-cors-origins \
+echo -n "https://verbatim.vercel.app" | gcloud secrets create verbatim-cors-origins \
   --data-file=- --project "$PROJECT_ID"
 
 echo "=== 5. Create Artifact Registry repo ==="
-gcloud artifacts repositories create mindanchor \
+gcloud artifacts repositories create verbatim \
   --repository-format=docker \
   --location="$REGION" \
   --project "$PROJECT_ID"
 
 echo "=== 6. Create service account for Cloud Run ==="
-SA="mindanchor-api@${PROJECT_ID}.iam.gserviceaccount.com"
-gcloud iam service-accounts create mindanchor-api \
-  --display-name="MindAnchor API" \
+SA="verbatim-api@${PROJECT_ID}.iam.gserviceaccount.com"
+gcloud iam service-accounts create verbatim-api \
+  --display-name="Verbatim API" \
   --project "$PROJECT_ID"
 
 # Grant Cloud SQL client + Secret Manager accessor
@@ -79,7 +79,7 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 echo ""
 echo "=== Done! Next steps ==="
 echo "1. Add ANTHROPIC_API_KEY secret:"
-echo "   echo -n 'sk-ant-...' | gcloud secrets create mindanchor-anthropic-key --data-file=- --project $PROJECT_ID"
+echo "   echo -n 'sk-ant-...' | gcloud secrets create verbatim-anthropic-key --data-file=- --project $PROJECT_ID"
 echo ""
 echo "2. Set GitHub Actions secrets (see docs/DEPLOY.md)"
 echo ""

@@ -1,15 +1,15 @@
-# Cloud Build pipeline for the FRONTEND Cloud Run service (mindanchor-frontend).
+# Cloud Build pipeline for the FRONTEND Cloud Run service (verbatim-frontend).
 #
 # Wire a trigger to this file so frontend/ changes auto-deploy (today the
 # frontend is deployed manually). One-time trigger creation:
 #
 #   gcloud builds triggers create github \
-#     --name=mindanchor-frontend \
-#     --repo-owner=OwnYourSystem --repo-name=MindAnchor \
+#     --name=verbatim-frontend \
+#     --repo-owner=OwnYourSystem --repo-name=Verbatim \
 #     --branch-pattern='^main$' \
 #     --build-config=frontend/cloudbuild.yaml \
 #     --included-files='frontend/**' \
-#     --region=europe-north2 --project=mindanchor-500313
+#     --region=europe-north2 --project=<VERBATIM_GCP_PROJECT_ID>
 #
 # --included-files limits the trigger to frontend changes so it doesn't fire on
 # backend-only commits (the existing backend trigger handles those).
@@ -34,7 +34,7 @@ steps:
     args:
       - run
       - deploy
-      - mindanchor-frontend
+      - verbatim-frontend
       - --image=${_IMAGE}:$COMMIT_SHA
       - --region=europe-north2
       - --platform=managed
@@ -43,9 +43,10 @@ steps:
       - --set-env-vars=BACKEND_ORIGIN=${_BACKEND_ORIGIN},BACKEND_HOST=${_BACKEND_HOST}
 
 substitutions:
-  _IMAGE: europe-north2-docker.pkg.dev/mindanchor-500313/cloud-run-source-deploy/mindanchor-frontend
-  _BACKEND_ORIGIN: https://mindanchor-p56twm4tsa-ma.a.run.app
-  _BACKEND_HOST: mindanchor-p56twm4tsa-ma.a.run.app
+  # Fill these in once the Verbatim GCP project + backend Cloud Run service exist.
+  _IMAGE: europe-north2-docker.pkg.dev/<VERBATIM_GCP_PROJECT_ID>/cloud-run-source-deploy/verbatim-frontend
+  _BACKEND_ORIGIN: https://<VERBATIM_BACKEND_RUN_URL>
+  _BACKEND_HOST: <VERBATIM_BACKEND_RUN_URL>
 
 images:
   - "${_IMAGE}:$COMMIT_SHA"

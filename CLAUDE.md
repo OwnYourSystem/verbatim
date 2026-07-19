@@ -1,24 +1,21 @@
-# CLAUDE.md — MindAnchor project guide & action log
+# CLAUDE.md — Verbatim project guide & action log
 
-This file is the working memory for the MindAnchor build. It records **what the project is**, **the decisions made**, and a **chronological log of every action taken**. Update the action log on every meaningful change.
+This file is the working memory for the Verbatim build. It records **what the project is**, **the decisions made**, and a **chronological log of every action taken**. Update the action log on every meaningful change.
 
 ---
 
 ## ▶ Resume here (read this first)
 
-**Status:** Phases 1–9 + CR-2 (SK ratings) + CR-3 (Product Dev) are **done and live in production**. Production is **live on Google Cloud** (project `mindanchor-500313`, region `europe-north2`) — Cloud Run + Cloud SQL. The authoritative runbook is `docs/DEPLOY.md`; architecture in `docs/DOCUMENTATION.md`.
+**Status (fork point — 2026-07-19):** Verbatim is a **fork of MindAnchor** (`OwnYourSystem/MindAnchor`, private), created as a byte-for-byte copy of MindAnchor's `main` at commit `c1a966d` (full git history carried over — everything in the action log below through "2026-07-16 — Mobile fixes" happened in MindAnchor, before the fork). Same codebase, same features, same phases done. **Verbatim itself is NOT YET DEPLOYED** — it has no GCP project of its own yet. Every `<VERBATIM_...>` placeholder in `docs/DEPLOY.md`, `docs/GCP_CLAUDE_ACCESS.md`, `frontend/cloudbuild.yaml`, etc. needs a real value once that project is provisioned. Do not assume anything below the fork line is live — treat it as MindAnchor's inherited history, not Verbatim's own.
 
-**⚠ Actual production topology (authoritative — 2026-06-29):**
-- **Frontend:** Cloud Run `mindanchor-frontend` (`https://mindanchor-frontend-2814170686.europe-north2.run.app`) — React/Vite SPA served by nginx; nginx proxies `/api/*` to the backend server-side (so no CORS hop). **Auto-deployed** via Cloud Build trigger `mindanchor-frontend` (fires on `frontend/**` changes to `main`). Last deployed: revision `mindanchor-frontend-00005-xsx` (CR-3 + nginx envsubst fix, 2026-06-29).
-- **Backend:** Cloud Run `mindanchor` (`https://mindanchor-p56twm4tsa-ma.a.run.app`), FastAPI/uvicorn, Docker from `backend/`. Auto-deployed from GitHub `main` by a **Cloud Build trigger**. Last deployed: revision after CR-3 merge (migration 0010 applied on startup).
-- **Database:** Cloud SQL Postgres `mindanchor-db`, reached via the Cloud SQL connector socket. `config.py` normalizes bare `postgres://` to `postgresql+psycopg2://`. Migration chain: 0001→0011 live in prod.
-- **Migrations:** applied on startup by the FastAPI lifespan hook in `app/main.py` (`alembic upgrade head`).
-- **Stale-but-tracked config:** `render.yaml` is from the earlier Render plan (not used). GCP setup: `deploy/cloudrun.yaml` + `deploy/cloudsql-setup.sh`. Frontend infra (`frontend/Dockerfile`, `nginx.conf`, `cloudbuild.yaml`, root `docker-compose.yml`) committed.
-- **nginx envsubst fix (PR #12):** `NGINX_ENVSUBST_TEMPLATE_VARS` added to `frontend/Dockerfile` — prevents nginx:alpine from wiping its own runtime variables during envsubst template processing.
+**Why this fork exists:** MindAnchor stays exactly as it is — the owner's personal, single-user tool, untouched. Verbatim is the base for a **separate commercial, multi-tenant product** built by applying Apple-style product principles (hidden complexity, opinionated defaults, feature discipline, an accumulating personal "data moat," premium reliability, one clean subscription) on top of this same engine. That means real user accounts (not the single JWT owner login), a rebalanced/simplified nav and onboarding, and — eventually — billing. None of that is built yet; this fork is Phase 0 (exact copy, new repo, new infra identity) of that plan.
 
-**Both frontend and backend now auto-deploy on push to `main`.** No manual deploy steps needed going forward.
-
-**Do next:** (1) Smoke-test the full Product Dev flow live on mobile: Wall of Pains → create project → Product Dev → sprints + stories (the mobile layout overlap bug is fixed — see 2026-07-16 "mobile fixes" entry below — but hasn't been eyeballed against real Product Dev data on a phone). (2) Tier-2 server push notifications (`docs/NOTIFICATIONS.md`).
+**Do next (in order):**
+1. Provision Verbatim's own GCP project (Cloud Run ×2, Cloud SQL, Artifact Registry, Secret Manager, Cloud Build triggers) — adapt `deploy/cloudsql-setup.sh` and the two `cloudbuild.yaml` files, fill in the `<VERBATIM_...>` placeholders, wire CI to `OwnYourSystem/verbatim`.
+2. Confirm a from-scratch deploy works end-to-end (same runbook MindAnchor uses, new project) before any product changes.
+3. Start the multi-tenancy rework (per-user `User` table, `user_id` scoping on every table, real signup/login) — this is the first real divergence from MindAnchor's code.
+4. Then the Apple-principles UX rework: nav consolidation, opinionated defaults, onboarding that shows value before setup, and the data-moat features (streak, per-System history, a persistent AI profile of the user, compounding TimeLog/SK-rating insights) discussed when this fork was planned.
+5. Billing (Stripe, one tier) and commercial hardening (rate limiting, monitoring, ToS/privacy, tenant-isolation testing) come after the product shape is right, not before.
 
 **Live agent is ON:** `backend/.env` has a real (rotated) key, so `get_llm()`/`get_intake()` use real Claude when the backend runs. Not yet smoke-tested live (needs backend running against local Postgres). Tests stay offline via `tests/conftest.py`.
 
@@ -33,11 +30,11 @@ This file is the working memory for the MindAnchor build. It records **what the 
 
 **⚠ Environment gotchas (learned the hard way — don't repeat):**
 - **Do NOT build the Python venv on the network share** and do not run `pip install --upgrade pip` there — it corrupts pip mid-write (`pip._vendor.rich` ModuleNotFoundError). Build the venv on **local disk**.
-- The working test venv is at `%LOCALAPPDATA%\Temp\mindanchor-venv` (Python 3.14). It may be gone tomorrow (temp dir) — if so, recreate on local disk.
+- The working test venv is at `%LOCALAPPDATA%\Temp\verbatim-venv` (Python 3.14). It may be gone tomorrow (temp dir) — if so, recreate on local disk.
 - Local Python is **3.14**, which has **no wheels** for the pinned dep versions (pydantic-core fails to build). For local testing, `pip install -U fastapi pydantic pydantic-settings sqlalchemy httpx pytest ruff` (latest, has cp314 wheels). **CI and deploy use the pinned `requirements.txt` on Python 3.11** — keep the pins as-is.
 - Run lint+tests: `cd backend` then `<localvenv>\Scripts\python.exe -m ruff check .` and `... -m pytest -q`. Last run: ruff clean, 6 passed.
 - For DB work locally: start Postgres (Docker one-liner in `docs/DATABASE.md`), set `backend/.env` `DATABASE_URL`, then `python scripts/init_db.py`.
-- **Frontend build cannot run from the network share:** `npm run <script>` spawns `cmd.exe` which rejects UNC cwd, and `esbuild`'s postinstall fails under UNC (rolls back `node_modules`). To verify the frontend, **copy `frontend/` to a local-disk temp dir** (e.g. `%LOCALAPPDATA%\Temp\mindanchor-fe`), then `npm install` and build by calling node directly: `node node_modules/typescript/bin/tsc -b && node node_modules/vite/bin/vite.js build`. CI (GitHub Actions, ubuntu) builds it normally — no UNC issue there. Last local build: ✅ tsc clean, vite built, PWA SW generated.
+- **Frontend build cannot run from the network share:** `npm run <script>` spawns `cmd.exe` which rejects UNC cwd, and `esbuild`'s postinstall fails under UNC (rolls back `node_modules`). To verify the frontend, **copy `frontend/` to a local-disk temp dir** (e.g. `%LOCALAPPDATA%\Temp\verbatim-fe`), then `npm install` and build by calling node directly: `node node_modules/typescript/bin/tsc -b && node node_modules/vite/bin/vite.js build`. CI (GitHub Actions, ubuntu) builds it normally — no UNC issue there. Last local build: ✅ tsc clean, vite built, PWA SW generated.
 
 **Convention:** end every phase with a `CLAUDE.md` action-log update + commit + push.
 
@@ -56,10 +53,10 @@ How this project is worked on going forward:
 
 ## Project
 
-MindAnchor — a personal, single-user AI productivity system (AI project manager + scrum master + calendar + morning briefing). Source of truth for product scope: [`MindAnchor_Product_Description.md`](../MindAnchor_Product_Description.md). Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Verbatim — a personal, single-user AI productivity system (AI project manager + scrum master + calendar + morning briefing). Source of truth for product scope: [`Verbatim_Product_Description.md`](../Verbatim_Product_Description.md). Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-- **GitHub**: https://github.com/OwnYourSystem/MindAnchor (private, account `OwnYourSystem`)
-- **Local path**: `…/Calude_projects/.starter/MindAnchor` (network share)
+- **GitHub**: https://github.com/OwnYourSystem/verbatim (public, account `OwnYourSystem`)
+- **Local path**: `…/Calude_projects/.starter/Verbatim` (network share) — inherited from MindAnchor's owner-local setup; adjust to wherever Verbatim is actually checked out locally.
 
 ## Locked decisions
 
@@ -217,7 +214,7 @@ Implemented the first testing-phase change request end-to-end:
 
 ### 2026-06-09
 
-- Created GitHub repo `OwnYourSystem/MindAnchor` (private) via `gh` CLI; cloned locally.
+- Created GitHub repo `OwnYourSystem/verbatim` (private) via `gh` CLI; cloned locally.
 - **Phase 1 — scaffold** committed & pushed (`main`, commit `c684f48`):
   - Monorepo layout: `frontend/`, `backend/`, `mobile/`, `docs/`.
   - Backend: FastAPI skeleton (`/`, `/health`), `app/core/config.py` (env-driven settings), `requirements.txt`, `pyproject.toml` (ruff+pytest), smoke tests in `tests/test_health.py`, `.env.example`, `README.md`. Python compile-checked OK.
@@ -236,7 +233,7 @@ Implemented the first testing-phase change request end-to-end:
   - Alembic scaffolding: `alembic.ini`, `alembic/env.py` (wired to Base + settings URL), `script.py.mako`, `versions/`. `scripts/init_db.py` for dev table creation.
   - `docs/DATABASE.md` — local Postgres (Docker/native) + future Cloud SQL setup.
   - Tests: `tests/test_crud.py` (in-memory SQLite, no live DB needed) covering priority inheritance, cascade delete, monthly priority upsert idempotency, focus blocks & agent assignment.
-  - **Verified locally:** `ruff check` clean; `pytest` 6 passed. (Local venv built on disk at `%LOCALAPPDATA%\Temp\mindanchor-venv`; latest dep versions used for the 3.14 interpreter — CI/deploy use the pinned versions on Python 3.11.)
+  - **Verified locally:** `ruff check` clean; `pytest` 6 passed. (Local venv built on disk at `%LOCALAPPDATA%\Temp\verbatim-venv`; latest dep versions used for the 3.14 interpreter — CI/deploy use the pinned versions on Python 3.11.)
   - Fixes during build: lazy engine (avoid eager `psycopg2` import); `StrEnum` (UP042); ruff ignore `B008` (FastAPI `Depends` idiom); resolved `app` package vs FastAPI-instance name collision in tests.
 - Added the **"Resume here"** section at the top of this file (status, next step, run/test commands, environment gotchas) so a fresh session can pick up cleanly.
 - **Phase 3 — dashboard, calendar & rule-based daily focus** built:

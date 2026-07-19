@@ -12,22 +12,22 @@ Pick whichever you prefer:
 
 **Docker (simplest):**
 ```bash
-docker run --name mindanchor-pg -e POSTGRES_USER=mindanchor \
-  -e POSTGRES_PASSWORD=mindanchor -e POSTGRES_DB=mindanchor \
+docker run --name verbatim-pg -e POSTGRES_USER=verbatim \
+  -e POSTGRES_PASSWORD=verbatim -e POSTGRES_DB=verbatim \
   -p 5432:5432 -d postgres:16
 ```
 
 **Native install:** install PostgreSQL 16, then create the role/db:
 ```sql
-CREATE USER mindanchor WITH PASSWORD 'mindanchor';
-CREATE DATABASE mindanchor OWNER mindanchor;
+CREATE USER verbatim WITH PASSWORD 'verbatim';
+CREATE DATABASE verbatim OWNER verbatim;
 ```
 
 ### 2. Point the app at it
 
 `backend/.env`:
 ```
-DATABASE_URL=postgresql+psycopg2://mindanchor:mindanchor@localhost:5432/mindanchor
+DATABASE_URL=postgresql+psycopg2://verbatim:verbatim@localhost:5432/verbatim
 ```
 
 ### 3. Create the schema
@@ -56,10 +56,10 @@ Outline (commands finalized in the deploy phase):
 
 1. Create a Cloud SQL for PostgreSQL instance.
    ```bash
-   gcloud sql instances create mindanchor-db \
+   gcloud sql instances create verbatim-db \
      --database-version=POSTGRES_16 --tier=db-f1-micro --region=europe-west1
-   gcloud sql databases create mindanchor --instance=mindanchor-db
-   gcloud sql users create mindanchor --instance=mindanchor-db --password=...
+   gcloud sql databases create verbatim --instance=verbatim-db
+   gcloud sql users create verbatim --instance=verbatim-db --password=...
    ```
 2. Connect from the backend via the **Cloud SQL Auth Proxy** (local/dev-against-cloud) or a **Unix socket** (Cloud Run).
 3. Set `DATABASE_URL` as a secret in the hosting platform.

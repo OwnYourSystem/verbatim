@@ -5,11 +5,11 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: mindanchor
-      POSTGRES_USER: mindanchor
+      POSTGRES_DB: verbatim
+      POSTGRES_USER: verbatim
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mindanchor"]
+      test: ["CMD-SHELL", "pg_isready -U verbatim"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -19,7 +19,7 @@ services:
     restart: unless-stopped
     env_file: .env.production
     environment:
-      DATABASE_URL: postgresql+psycopg2://mindanchor:${POSTGRES_PASSWORD}@postgres:5432/mindanchor
+      DATABASE_URL: postgresql+psycopg2://verbatim:${POSTGRES_PASSWORD}@postgres:5432/verbatim
       PORT: "8080"
     depends_on:
       postgres:

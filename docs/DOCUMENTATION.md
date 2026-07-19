@@ -1,8 +1,8 @@
-# MindAnchor — Architecture & Philosophy
+# Verbatim — Architecture & Philosophy
 
-![MindAnchor architecture](architecture.jpg)
+![Verbatim architecture](architecture.jpg)
 
-MindAnchor is a single-user AI productivity system — an AI project manager,
+Verbatim is a single-user AI productivity system — an AI project manager,
 scrum master, calendar, and morning briefing rolled into one. This document
 explains *how* it is built and, more importantly, *why* it is shaped this way,
 using the established principles of software architecture.
@@ -11,7 +11,7 @@ using the established principles of software architecture.
 
 ## The one-paragraph philosophy
 
-**A working tool first, intelligence second.** MindAnchor is a fully usable
+**A working tool first, intelligence second.** Verbatim is a fully usable
 manual productivity app that happens to have an AI layer bolted on top — never
 an AI that you have to trust before the app does anything. Every architectural
 decision flows from that single idea: the *core* must stand on its own, the
@@ -115,15 +115,15 @@ Purely deterministic. This works whether or not Claude is configured.
 
 ## Deployment topology
 
-Live on **Google Cloud** (project `mindanchor-500313`, region `europe-north2`).
+Live on **Google Cloud** (project `<VERBATIM_GCP_PROJECT_ID>`, region `europe-north2`).
 See [`DEPLOY.md`](DEPLOY.md) for the full runbook.
 
 - **Frontend** → React/Vite SPA built to static assets, served by **nginx on
-  Cloud Run** (`mindanchor-frontend`). nginx proxies `/api/*` to the backend
+  Cloud Run** (`verbatim-frontend`). nginx proxies `/api/*` to the backend
   server-side, so the browser only talks to one origin.
-- **Backend** → **FastAPI in Docker on Cloud Run** (`mindanchor`), auto-deployed
+- **Backend** → **FastAPI in Docker on Cloud Run** (`verbatim`), auto-deployed
   from GitHub `main` via a **Cloud Build** trigger (build → Artifact Registry → deploy).
-- **Database** → **Cloud SQL PostgreSQL** (`mindanchor-db`); Alembic migrations
+- **Database** → **Cloud SQL PostgreSQL** (`verbatim-db`); Alembic migrations
   applied automatically on backend startup.
 - **AI** → **Anthropic Claude**, called only on user events.
 

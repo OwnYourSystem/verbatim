@@ -1,4 +1,4 @@
-# MindAnchor — Backend
+# Verbatim — Backend
 
 FastAPI service. Phase 1 is a runnable skeleton (health endpoints). Data models, CRUD, and the agent layer come next.
 

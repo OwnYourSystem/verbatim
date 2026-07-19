@@ -1,10 +1,10 @@
-# MindAnchor — Setup & Self-Hosting Guide
+# Verbatim — Setup & Self-Hosting Guide
 
-This guide is for anyone who clones MindAnchor and wants to **run it locally** or
+This guide is for anyone who clones Verbatim and wants to **run it locally** or
 **deploy it to their own Google Cloud project**. It assumes no prior knowledge of
 the repo. For the maintainer's live environment specifics, see [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
-> MindAnchor is a single-user system. Each person runs their **own** instance
+> Verbatim is a single-user system. Each person runs their **own** instance
 > (their own DB, their own auth, their own optional Claude key). There is no
 > shared multi-tenant server.
 
@@ -28,8 +28,8 @@ any host that can serve a container + Postgres.
 ## 2. Run locally (Docker — recommended)
 
 ```bash
-git clone https://github.com/OwnYourSystem/MindAnchor.git
-cd MindAnchor
+git clone https://github.com/OwnYourSystem/verbatim.git
+cd Verbatim
 docker compose up --build
 # frontend → http://localhost:8080   backend → http://localhost:8000
 ```
@@ -92,11 +92,11 @@ GCP project (two Cloud Run services + Cloud SQL):
 High-level steps (full runbook in [`docs/DEPLOY.md`](docs/DEPLOY.md)):
 
 1. Set `PROJECT_ID`/region, then run `deploy/cloudsql-setup.sh` to provision infra.
-2. Deploy the backend: `gcloud run deploy mindanchor --source backend --region <region>`.
+2. Deploy the backend: `gcloud run deploy verbatim --source backend --region <region>`.
 3. Deploy the frontend with the backend URL injected:
    ```bash
    BACKEND=<your-backend>.run.app
-   gcloud run deploy mindanchor-frontend --source frontend --port 8080 --allow-unauthenticated \
+   gcloud run deploy verbatim-frontend --source frontend --port 8080 --allow-unauthenticated \
      --set-env-vars "BACKEND_ORIGIN=https://${BACKEND},BACKEND_HOST=${BACKEND}"
    ```
 4. (Optional) Wire auto-deploy triggers so pushes to `main` deploy automatically —

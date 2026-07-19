@@ -1,4 +1,4 @@
-# MindAnchor — Mobile (Expo / React Native)
+# Verbatim — Mobile (Expo / React Native)
 
 React Native app built with **Expo Router** (file-based routing). Shares types and API logic with the web frontend.
 
@@ -47,7 +47,7 @@ npm run android  # Android Emulator / device
 
 Set `EXPO_PUBLIC_API_URL` to your backend URL:
 - **Dev:** your machine's LAN IP, e.g. `http://192.168.1.x:8000`
-- **Prod:** Cloud Run URL, e.g. `https://mindanchor-api-xxxx.run.app`
+- **Prod:** Cloud Run URL, e.g. `https://verbatim-api-xxxx.run.app`
 
 Create a `.env.local` in `mobile/` (gitignored):
 ```

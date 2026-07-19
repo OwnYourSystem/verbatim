@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "favicon.png", "apple-touch-icon.png"],
       manifest: {
-        name: "MindAnchor",
-        short_name: "MindAnchor",
+        name: "Verbatim",
+        short_name: "Verbatim",
         description: "Your external brain — AI project manager, scrum master & calendar.",
         theme_color: "#0f172a",
         background_color: "#0f172a",

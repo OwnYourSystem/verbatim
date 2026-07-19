@@ -24,7 +24,7 @@ from app.models import (
     WorkStatus,
 )
 
-logger = logging.getLogger("mindanchor.events")
+logger = logging.getLogger("verbatim.events")
 
 
 # ---------------------------------------------------------------------------

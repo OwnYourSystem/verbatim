@@ -1,4 +1,4 @@
-"""Generate MindAnchor Codebase Explained PDF."""
+"""Generate Verbatim Codebase Explained PDF."""
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.units import mm
@@ -12,7 +12,7 @@ from reportlab.platypus.doctemplate import PageTemplate, BaseDocTemplate
 from reportlab.platypus.frames import Frame
 import os
 
-OUT = os.path.join(os.path.dirname(__file__), "MindAnchor_Codebase_Explained.pdf")
+OUT = os.path.join(os.path.dirname(__file__), "Verbatim_Codebase_Explained.pdf")
 
 # ── Colours ──────────────────────────────────────────────────────────────────
 NAVY      = colors.HexColor("#0f1630")
@@ -79,7 +79,7 @@ class NumberedCanvas(canvas.Canvas):
         self.saveState()
         self.setFont("Helvetica", 8)
         self.setFillColor(MID_GRAY)
-        self.drawCentredString(W / 2, 12 * mm, f"MindAnchor — Codebase Explained  ·  {page - 2} / {page_count - 2}")
+        self.drawCentredString(W / 2, 12 * mm, f"Verbatim — Codebase Explained  ·  {page - 2} / {page_count - 2}")
         self.restoreState()
 
 # ── Section header block ──────────────────────────────────────────────────────
@@ -145,7 +145,7 @@ CONTENT = [
     ]),
     ("SECTION 2 — BACKEND: AI AGENTS", [
         ("agents/llm.py",
-         "The translator between MindAnchor and Claude (Anthropic's AI). Has two modes: a 'stub' mode that uses pure logic (no internet, no cost, always works), and a 'real' mode that calls the actual Claude API. The app automatically picks the right mode depending on whether an API key is present.",
+         "The translator between Verbatim and Claude (Anthropic's AI). Has two modes: a 'stub' mode that uses pure logic (no internet, no cost, always works), and a 'real' mode that calls the actual Claude API. The app automatically picks the right mode depending on whether an API key is present.",
          "LLMClient protocol defines one method: propose(context: dict) -> dict. StubLLM is a deterministic planner: sorts open tasks by deadline, prepends a 'Prep:' subtask if any deadline is <=3 days away, returns JSON with summary and actions. Used in tests and when ANTHROPIC_API_KEY is empty. AnthropicLLM lazily imports anthropic, sends a strict-JSON prompt to claude-opus-4-8, parses and returns the JSON payload. get_llm() factory returns AnthropicLLM if API key is set, otherwise StubLLM."),
         ("agents/orchestrator.py",
          "Coordinates between the database, the AI, and the approval workflow. When you click 'Rebalance' on a system, it snapshots that system's state, asks the AI for a plan, validates the plan, and saves it as a 'pending' proposal for you to review. Nothing is applied until you approve.",
@@ -226,22 +226,22 @@ CONTENT = [
     ]),
     ("SECTION 5 — INFRASTRUCTURE & CONFIG", [
         ("Dockerfile",
-         "Blueprint for packaging the backend into a portable container. Ensures that no matter which server runs MindAnchor, it always runs with the exact same Python version, dependencies, and startup sequence.",
+         "Blueprint for packaging the backend into a portable container. Ensures that no matter which server runs Verbatim, it always runs with the exact same Python version, dependencies, and startup sequence.",
          "Multi-stage build. Builder stage: installs gcc and libpq-dev to compile psycopg2, installs all Python packages into /install. Runtime stage: starts from clean python:3.11-slim, copies only installed packages (not build tools), copies application code. Runs as non-root user (appuser) — security best practice. ENV PORT=8080. CMD runs: alembic upgrade head (applies pending migrations automatically on every container start), then uvicorn app.main:app (starts the API server)."),
         ("requirements.txt",
          "The exact list of Python packages with pinned versions. Pinning ensures the production deploy uses the same library versions as development — preventing 'works on my machine' surprises.",
          "Web framework: fastapi 0.115.6, uvicorn[standard]. Database: sqlalchemy 2.0.36, alembic 1.14.0, psycopg2-binary. Validation: pydantic 2.10.4, pydantic-settings 2.7.0. Auth: python-jose[cryptography] 3.3.0, passlib[bcrypt] 1.7.4, bcrypt 4.0.1 (pinned because passlib 1.7.4 breaks with bcrypt >=4.1). AI: anthropic 0.42.0. HTTP client: httpx 0.28.1. Dev/test: pytest, ruff."),
         ("vite.config.ts",
          "Configures how the frontend is built and how it behaves in development. Enables PWA capabilities — offline support, installability on mobile, and caching.",
-         "React plugin enables JSX transform and fast refresh. Dev server proxy: /api/* forwarded to http://localhost:8000 — frontend never hardcodes the backend URL or deals with CORS in dev. VitePWA: registerType autoUpdate, Workbox precaches all built assets, runtime StaleWhileRevalidate cache for /api/* (5-min max age, 50 entry limit). Manifest: name 'MindAnchor', standalone display, full icon set (192px, 512px, maskable), orientation, category 'productivity'."),
+         "React plugin enables JSX transform and fast refresh. Dev server proxy: /api/* forwarded to http://localhost:8000 — frontend never hardcodes the backend URL or deals with CORS in dev. VitePWA: registerType autoUpdate, Workbox precaches all built assets, runtime StaleWhileRevalidate cache for /api/* (5-min max age, 50 entry limit). Manifest: name 'Verbatim', standalone display, full icon set (192px, 512px, maskable), orientation, category 'productivity'."),
         ("vercel.json",
          "Tells Vercel how to handle incoming requests. The critical job is proxying API calls from the browser to the Render backend, since they live on different domains.",
-         "Rewrite rule: /api/:path* → https://mindanchor-api.onrender.com/:path* — rewrites happen at the Vercel edge server-side, bypassing browser CORS entirely. Headers: service worker served with no-cache so the browser always checks for updates. Built assets served with immutable cache headers (1-year, content-hashed filenames)."),
+         "Rewrite rule: /api/:path* → https://verbatim-api.onrender.com/:path* — rewrites happen at the Vercel edge server-side, bypassing browser CORS entirely. Headers: service worker served with no-cache so the browser always checks for updates. Built assets served with immutable cache headers (1-year, content-hashed filenames)."),
         ("index.html",
          "The single HTML page the browser loads. In a React SPA there is only ever one HTML file — React takes over from here and renders everything else in JavaScript.",
          "Sets lang, charset, viewport with viewport-fit=cover for iPhone notch. PWA meta tags: theme-color, apple-mobile-web-app-capable, apple-mobile-web-app-status-bar-style. Google Fonts: preconnects and loads Inter (400–800 weights) and JetBrains Mono (600 weight). Icon links: favicon.svg, favicon.png (32px), apple-touch-icon.png (180px). div#root is the React mount point."),
         ("index.css",
-         "The global stylesheet — the visual design language. Defines the colour tokens, spacing, and component styles that give MindAnchor its 'Cosmos' dark sci-fi aesthetic. The design system written in CSS.",
+         "The global stylesheet — the visual design language. Defines the colour tokens, spacing, and component styles that give Verbatim its 'Cosmos' dark sci-fi aesthetic. The design system written in CSS.",
          ":root CSS variables: Background scale --color-void (#03040a) through --color-hull (#0f1630). Signal colours: --color-signal-ok (emerald), --color-signal-warn (amber), --color-signal-crit (red), --color-signal-idle (slate). --glass-bg and --glass-border for glassmorphism panels. --glow-ok/warn/crit/ui box-shadow glow presets. --ease-spring cubic-bezier(0.34,1.56,0.64,1) for bouncy transitions. Component classes: .glass-panel (backdrop-blur frosted glass), .metric (JetBrains Mono tabular numerals), .cosmos-btn-primary (emerald gradient with glow), .cosmos-btn-secondary (violet ghost button), .skeleton-bone (shimmer loader). Keyframes: fade-up, shimmer. prefers-reduced-motion block disables all animations for accessibility."),
         (".github/workflows/ci.yml",
          "Automates quality checks and deployment. Every code push automatically checks style, runs tests, builds the frontend, and deploys to Render and Vercel. Humans don't need to remember any of these steps.",
@@ -258,7 +258,7 @@ def build():
     # ── Cover page ─────────────────────────────────────────────────────────────
     story.append(Spacer(1, 60*mm))
     # Navy banner
-    data = [[Paragraph("MindAnchor", S["cover_title"])]]
+    data = [[Paragraph("Verbatim", S["cover_title"])]]
     t = Table(data, colWidths=[W - 40*mm])
     t.setStyle(TableStyle([
         ("BACKGROUND", (0,0), (-1,-1), NAVY),
@@ -329,8 +329,8 @@ def build():
         pagesize=A4,
         leftMargin=20*mm, rightMargin=20*mm,
         topMargin=18*mm, bottomMargin=20*mm,
-        title="MindAnchor — Codebase Explained",
-        author="MindAnchor",
+        title="Verbatim — Codebase Explained",
+        author="Verbatim",
     )
     doc.build(story, canvasmaker=NumberedCanvas)
     print(f"PDF saved: {OUT}")

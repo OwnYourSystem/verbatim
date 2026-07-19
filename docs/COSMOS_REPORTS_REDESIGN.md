@@ -63,7 +63,7 @@ Near-black flat panels with a single-pixel luminous border. No blur. Monochromat
 
 ### Primary Direction: A — Nebula Glass
 
-Rationale: MindAnchor is a personal AI productivity OS. Its brand positioning (anchor in the mind, AI as a co-pilot) maps naturally to a rich, immersive environment. Nebula Glass communicates intelligence and depth without becoming a game UI. Stellar Minimal would read as a generic dark SaaS — appropriate for enterprise but underselling the product's character. Nebula Glass is also more distinctive in the productivity tool market.
+Rationale: Verbatim is a personal AI productivity OS. Its brand positioning (anchor in the mind, AI as a co-pilot) maps naturally to a rich, immersive environment. Nebula Glass communicates intelligence and depth without becoming a game UI. Stellar Minimal would read as a generic dark SaaS — appropriate for enterprise but underselling the product's character. Nebula Glass is also more distinctive in the productivity tool market.
 
 ---
 

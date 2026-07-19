@@ -4,7 +4,7 @@ Run after init_db.py (or alembic upgrade head):
   python scripts/seed_users.py
 
 Creates:
-  - tester / Tester@MindAnchor2026   (role=tester)
+  - tester / Tester@Verbatim2026   (role=tester)
 
 The 'owner' account uses the PASSWORD_HASH env var (not seeded here).
 """
@@ -20,7 +20,7 @@ from app.db import get_engine
 from app.models import Base, User
 
 USERS = [
-    {"username": "tester", "password": "Tester@MindAnchor2026", "role": "tester"},
+    {"username": "tester", "password": "Tester@Verbatim2026", "role": "tester"},
 ]
 
 

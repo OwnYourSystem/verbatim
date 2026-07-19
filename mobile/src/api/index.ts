@@ -1,5 +1,5 @@
 /**
- * MindAnchor API client for React Native.
+ * Verbatim API client for React Native.
  * Mirrors the web frontend/src/api.ts — same endpoints, same types.
  * BASE_URL is set via app.json / env; default points to local backend.
  */

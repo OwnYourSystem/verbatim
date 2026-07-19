@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "MindAnchor",
-    "slug": "mindanchor",
+    "name": "Verbatim",
+    "slug": "verbatim",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,16 +11,16 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ownyoursystem.mindanchor"
+      "bundleIdentifier": "com.ownyoursystem.verbatim"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0f172a"
       },
-      "package": "com.ownyoursystem.mindanchor"
+      "package": "com.ownyoursystem.verbatim"
     },
-    "scheme": "mindanchor",
+    "scheme": "verbatim",
     "plugins": ["expo-router", "expo-secure-store"]
   }
 }

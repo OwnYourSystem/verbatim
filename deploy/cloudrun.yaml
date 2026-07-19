@@ -1,7 +1,7 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: mindanchor-api
+  name: verbatim-api
   annotations:
     run.googleapis.com/ingress: all
 spec:
@@ -12,11 +12,11 @@ spec:
         autoscaling.knative.dev/minScale: "0"
         autoscaling.knative.dev/maxScale: "3"
         # Cloud SQL connection
-        run.googleapis.com/cloudsql-instances: "PROJECT_ID:REGION:mindanchor-db"
+        run.googleapis.com/cloudsql-instances: "PROJECT_ID:REGION:verbatim-db"
     spec:
-      serviceAccountName: mindanchor-api@PROJECT_ID.iam.gserviceaccount.com
+      serviceAccountName: verbatim-api@PROJECT_ID.iam.gserviceaccount.com
       containers:
-        - image: REGION-docker.pkg.dev/PROJECT_ID/mindanchor/api:latest
+        - image: REGION-docker.pkg.dev/PROJECT_ID/verbatim/api:latest
           ports:
             - containerPort: 8080
           resources:
@@ -30,8 +30,8 @@ spec:
               value: "8080"
           envFrom: []
           # Secrets injected via Secret Manager
-          # Run: gcloud run services update mindanchor-api \
-          #   --set-secrets DATABASE_URL=mindanchor-db-url:latest \
-          #   --set-secrets JWT_SECRET=mindanchor-jwt-secret:latest \
-          #   --set-secrets ANTHROPIC_API_KEY=mindanchor-anthropic-key:latest \
-          #   --set-secrets CORS_ORIGINS=mindanchor-cors-origins:latest
+          # Run: gcloud run services update verbatim-api \
+          #   --set-secrets DATABASE_URL=verbatim-db-url:latest \
+          #   --set-secrets JWT_SECRET=verbatim-jwt-secret:latest \
+          #   --set-secrets ANTHROPIC_API_KEY=verbatim-anthropic-key:latest \
+          #   --set-secrets CORS_ORIGINS=verbatim-cors-origins:latest

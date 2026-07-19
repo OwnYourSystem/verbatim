@@ -11,7 +11,7 @@ def test_root():
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "ok"
-    assert body["app"] == "MindAnchor"
+    assert body["app"] == "Verbatim"
 
 
 def test_health():

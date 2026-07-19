@@ -1,4 +1,4 @@
-# MindAnchor Architecture Diagram
+# Verbatim Architecture Diagram
 
 ```mermaid
 flowchart LR
@@ -26,7 +26,7 @@ flowchart LR
   end
 
   subgraph GitHub["GitHub"]
-    I["OwnYourSystem/MindAnchor"]
+    I["OwnYourSystem/verbatim"]
     J["GitHub Actions CI/CD"]
   end
 

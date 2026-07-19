@@ -1,6 +1,6 @@
 # Notifications & the morning briefing
 
-MindAnchor's morning briefing content is produced by `GET /reports/morning-briefing` (focus, due today, flagged). How it reaches the user has two tiers.
+Verbatim's morning briefing content is produced by `GET /reports/morning-briefing` (focus, due today, flagged). How it reaches the user has two tiers.
 
 ## Tier 1 — implemented now (client-side)
 

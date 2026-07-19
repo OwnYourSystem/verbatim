@@ -3,8 +3,8 @@
 # Run as root or a user with sudo.
 set -euo pipefail
 
-REPO_URL="https://github.com/OwnYourSystem/MindAnchor.git"
-APP_DIR="/opt/mindanchor"
+REPO_URL="https://github.com/OwnYourSystem/verbatim.git"
+APP_DIR="/opt/verbatim"
 
 echo "==> Installing Docker..."
 apt-get update -q
@@ -49,7 +49,7 @@ done
 
 echo ""
 echo "================================================================"
-echo "  MindAnchor is running at http://$(curl -sf ifconfig.me || echo YOUR_IP)"
+echo "  Verbatim is running at http://$(curl -sf ifconfig.me || echo YOUR_IP)"
 echo "  API health:  http://$(curl -sf ifconfig.me || echo YOUR_IP)/api/health"
 echo ""
 echo "  Useful commands:"

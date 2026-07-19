@@ -1,4 +1,4 @@
-"""MindAnchor backend entry point."""
+"""Verbatim backend entry point."""
 from __future__ import annotations
 
 import logging

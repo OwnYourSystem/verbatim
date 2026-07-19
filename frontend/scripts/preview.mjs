@@ -6,7 +6,7 @@ const OUT = "/tmp/ui-preview";
 
 const systems = [
   { id: 1, name: "SAP Datasphere CLI", status: "active", current_priority: 90 },
-  { id: 2, name: "MindAnchor Build", status: "active", current_priority: 70 },
+  { id: 2, name: "Verbatim Build", status: "active", current_priority: 70 },
 ];
 const tasks = [
   { id: 1, system_id: 1, title: "Ship the export command", status: "in_progress", deadline: "2026-06-13", position: 0 },
@@ -37,7 +37,7 @@ const report = {
   sections: [
     { heading: "Behind", items: ["SAP Datasphere CLI — “Fix auth token refresh” is blocked"] },
     { heading: "Coming up", items: ["Ship the export command (due 2026-06-13)", "Write integration tests (due 2026-06-16)"] },
-    { heading: "Completion", items: ["SAP Datasphere CLI: 25% complete", "MindAnchor Build: 60% complete"] },
+    { heading: "Completion", items: ["SAP Datasphere CLI: 25% complete", "Verbatim Build: 60% complete"] },
   ],
 };
 const blocks = [

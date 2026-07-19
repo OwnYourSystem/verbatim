@@ -1,6 +1,6 @@
 # The AI brain — agent layer
 
-MindAnchor's agents are **event-triggered specialists**, one per System, coordinated by an **orchestrator**. They are **human-gated**: an agent only ever produces a *proposal*; nothing is applied until you approve it.
+Verbatim's agents are **event-triggered specialists**, one per System, coordinated by an **orchestrator**. They are **human-gated**: an agent only ever produces a *proposal*; nothing is applied until you approve it.
 
 ## Components (backend/app/agents/)
 

@@ -1,4 +1,4 @@
-# MindAnchor — Frontend
+# Verbatim — Frontend
 
 React + TypeScript + Vite + Tailwind, configured as an installable **PWA**.
 

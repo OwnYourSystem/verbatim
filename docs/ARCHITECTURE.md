@@ -1,4 +1,4 @@
-# MindAnchor — Architecture
+# Verbatim — Architecture
 
 This document records the design and the key decisions behind it. It is the source of truth for *why* the system is shaped the way it is.
 
@@ -12,7 +12,7 @@ This document records the design and the key decisions behind it. It is the sour
    - an editable **role instruction file** (`program.md`-style, stored in DB),
    - a **read-only foundation** it cannot override — your monthly priorities and deadlines,
    - a **metric** it optimizes — on-time delivery %, priority alignment.
-3. **Event-triggered, not continuous.** Unlike autoresearch's infinite loop, MindAnchor agents fire only on events (task edit, priority change, check-in, weekly cycle). This keeps cost bounded and behavior predictable for a single-user tool.
+3. **Event-triggered, not continuous.** Unlike autoresearch's infinite loop, Verbatim agents fire only on events (task edit, priority change, check-in, weekly cycle). This keeps cost bounded and behavior predictable for a single-user tool.
 4. **Skeleton-first.** The app is fully usable manually before any AI is added. The AI is a layer on top of a working tool, never a prerequisite for using it.
 
 ---
@@ -99,6 +99,6 @@ CheckIn         — end-of-day completion record
 
 ## 6. Out of scope (v1)
 
-- Team features, sharing, delegation, collaboration — MindAnchor is single-user by design.
+- Team features, sharing, delegation, collaboration — Verbatim is single-user by design.
 - Native mobile app — a PWA ships first; React Native follows in a later phase.
 - Continuous autonomous agent loops — deferred unless event-triggered proves insufficient.

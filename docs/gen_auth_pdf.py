@@ -1,4 +1,4 @@
-"""Generate auth-options.pdf for MindAnchor."""
+"""Generate auth-options.pdf for Verbatim."""
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.units import cm
@@ -314,7 +314,7 @@ def build(out_path):
 
     # ── Title page ─────────────────────────────────────────────────────────────
     story.append(Spacer(1, 3 * cm))
-    story.append(Paragraph("MindAnchor", styles["title"]))
+    story.append(Paragraph("Verbatim", styles["title"]))
     story.append(Paragraph("Authentication Options", ParagraphStyle(
         "TitleSub", parent=base["Normal"],
         fontSize=20, textColor=C_ACCENT_B, spaceAfter=12,
@@ -395,7 +395,7 @@ def build(out_path):
     # ── Option B ───────────────────────────────────────────────────────────────
     story.append(Paragraph("Option B — Password Login + JWT", styles["h1"]))
     story.append(Paragraph(
-        "<b>RECOMMENDED for MindAnchor.</b>  The user logs in once with a password "
+        "<b>RECOMMENDED for Verbatim.</b>  The user logs in once with a password "
         "(stored only as a bcrypt hash in an env var — no DB row needed). "
         "The server issues a short-lived JWT. Every subsequent request carries "
         "that JWT; the server verifies the signature and expiry without any DB look-up.",
@@ -465,7 +465,7 @@ def build(out_path):
     story.append(Paragraph(
         "<b>When to choose this:</b>  If your PWA is served via Cloudflare (not Vercel) "
         "and you want zero-effort MFA without writing a single line of auth code. "
-        "For MindAnchor's current Vercel + Cloud Run setup, Option B is simpler.",
+        "For Verbatim's current Vercel + Cloud Run setup, Option B is simpler.",
         styles["body"],
     ))
 
@@ -474,4 +474,4 @@ def build(out_path):
 
 
 if __name__ == "__main__":
-    build("/home/user/MindAnchor/docs/auth-options.pdf")
+    build("/home/user/Verbatim/docs/auth-options.pdf")

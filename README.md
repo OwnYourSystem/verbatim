@@ -1,17 +1,17 @@
-# MindAnchor
+# Verbatim
 
 > Your external brain. AI project manager + scrum master + calendar + morning briefing — for one person managing a high-volume, complex workload alone.
 
-MindAnchor is a personal, AI-powered productivity system. You set monthly priorities once; MindAnchor keeps you oriented every day — what to do, why, and what's next.
+Verbatim is a personal, AI-powered productivity system. You set monthly priorities once; Verbatim keeps you oriented every day — what to do, why, and what's next.
 
 ## Status
 
-🟢 **Live on Google Cloud.** Phases 1–7 done (full manual app + the AI brain + reports/briefing) and **deployed to Cloud Run + Cloud SQL** with auto-deploy from `main`. Remaining: PWA polish + native mobile scaffold (Phase 8).
+🟡 **Forked from MindAnchor, not yet deployed.** Verbatim starts as a full copy of MindAnchor's codebase (same features, same phases done) under its own GitHub repo and its own — not yet provisioned — GCP project. See `CLAUDE.md` for the fork point and what's changing going forward (multi-tenant commercial product, Apple-principles UX rework).
 
 | Surface | URL |
 |---|---|
-| **Web app** | https://mindanchor-frontend-2814170686.europe-north2.run.app |
-| Backend API / docs | https://mindanchor-p56twm4tsa-ma.a.run.app · `/docs` |
+| **Web app** | *(pending — Verbatim GCP project not yet provisioned)* |
+| Backend API / docs | *(pending)* |
 
 See [`docs/DEPLOY.md`](docs/DEPLOY.md) for the deployment runbook and architecture diagram.
 
@@ -59,7 +59,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detail.
 ## Monorepo layout
 
 ```
-MindAnchor/
+Verbatim/
 ├── frontend/   # React PWA
 ├── backend/    # FastAPI + agent orchestration
 ├── mobile/     # React Native (later phase)
@@ -106,7 +106,7 @@ Interactive docs at `/docs` when the backend runs.
 
 **Part C — mobile & deploy**
 8. PWA polish + React Native scaffold — _pending_
-9. Cloud deployment (Cloud SQL + Cloud Run, auto-deploy via Cloud Build) — ✅ **live**
+9. Cloud deployment (Cloud SQL + Cloud Run, auto-deploy via Cloud Build) — _pending own GCP project_
 
 ## Documentation
 

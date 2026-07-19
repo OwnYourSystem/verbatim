@@ -1,5 +1,5 @@
 /**
- * Smoke + look-and-feel tests for MindAnchor UI.
+ * Smoke + look-and-feel tests for Verbatim UI.
  *
  * Verifies:
  *   1. Every route renders without a crash
@@ -128,7 +128,7 @@ test.describe("Navigation shell", () => {
     await page.goto("/");
 
     await expect(page.locator("header")).toBeVisible();
-    await expect(page.locator("header")).toContainText("MindAnchor");
+    await expect(page.locator("header")).toContainText("Verbatim");
 
     for (const label of ["Today", "Systems", "Calendar", "Proposals", "New system", "Reports"]) {
       await expect(page.getByRole("link", { name: label })).toBeVisible();

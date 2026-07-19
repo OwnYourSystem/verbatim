@@ -41,7 +41,7 @@ export function Login({ onSuccess }: { onSuccess: () => void }) {
         <div className="text-center mb-8">
           <span className="text-5xl" role="img" aria-label="anchor">⚓</span>
           <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-gradient">
-            MindAnchor
+            Verbatim
           </h1>
           <p className="mt-1 text-sm" style={{ color: "var(--color-signal-idle)" }}>
             Your external brain
